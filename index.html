@@ -1,0 +1,40 @@
+<!doctype html><html><head><meta charset="utf-8"><title>PTB 24.3 CosMx 6K viewer</title>
+<style>body{font-family:system-ui,sans-serif;margin:40px;background:#0f1116;color:#e6e6e6}
+h1{font-weight:600;margin-bottom:4px}.sub{color:#9aa4b2;margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:24px;max-width:900px}
+.card{display:block;padding:20px;background:#1b1f2a;border:1px solid #2a2f3a;border-radius:12px;text-decoration:none;color:#e6e6e6;transition:.15s}
+.card:hover{border-color:#4E9AF1;transform:translateY(-2px)}.card h2{margin:0 0 8px;font-size:1.1rem}.card p{margin:0;color:#9aa4b2;font-size:.9rem}
+.note{margin-top:32px;padding:16px 20px;background:#1b1f2a;border-left:3px solid #E64B35;border-radius:6px;max-width:900px;color:#c9d1d9;font-size:.9rem;line-height:1.55}
+.note b{color:#e6e6e6}code{background:#0f1116;padding:1px 5px;border-radius:4px}</style></head>
+<body><h1>PTB 24.3 — CosMx 6K spatial viewer <span style="font-size:1rem;color:#4E9AF1">(in-house reference)</span></h1>
+<p class="sub">One tissue block, 463,405 cells, 6175-gene panel. Labels transferred from an snRNA-seq reference built from <b>in-house PTB samples only</b>.</p>
+<div class="grid">
+<a class="card" href="PTB243_6k/index.html"><h2>PTB243_6k CosMx 6K</h2><p>463,405 cells &middot; 10 cell types &middot; 80 genes &middot; 10 IF channels</p></a>
+</div>
+<div class="note"><b>What is different in this viewer.</b> The reference was rebuilt from the 7 in-house
+<code>PTB-</code> samples only (31,399 cells), dropping the 4 external Pyle samples, because the CosMx slide and
+the pooled reference did not represent the same tissue. Two subclusters fell below the 50-reference-cell floor
+once restricted and were removed (<code>FB11</code> mesothelial, <code>BC7</code>) &mdash; cells that previously
+carried those labels are now assigned elsewhere. <code>TC9</code> (recently-activated T) was exempted and keeps
+its 77 Pyle cells, since it is the population of interest. The query object is byte-identical to the
+combined-reference run, so <b>every label difference here is due to the reference alone</b>.
+<br><br><b>Annotation layers.</b> Colour by <code>Major Cell Type</code>, <code>Subcluster</code>,
+<code>T-cell activation</code> or <code>Tissue piece</code>; toggle polygons; overlay marker genes or IF channels.
+The <b>T-cell activation</b> layer is <i>not</i> label transfer: it relabels T cells scoring above a cutoff on a
+7-gene immediate-early module (EGR1, EGR2, NR4A1/2/3, IER3, KDM6B) as
+<code>Early activation T cell</code>, leaving every other cell on its transferred label. EGR3, NFKBID and VDR
+were requested but are not on the 6K panel. See
+<code>analysis_inhouse/early_activation/00_module_score_histogram.pdf</code> for the cutoff provenance.
+<br><br><b>Highlighting.</b> Click the <span style="color:#ffd54f">&#9678;</span> on any legend row to draw an
+enlarged ring around those cells &mdash; works in both point and polygon mode &mdash; or paste a list of cell IDs
+into the highlight box (e.g. <code>early_activation/09_EAT_cell_ids.txt</code>). The ring size slider controls
+how prominent they are.
+<br><br><b>Caveats.</b> The slide holds <b>one tissue block placed as two pieces</b> (large = FOV 1-281,
+small = FOV 282-310) &mdash; they are not two specimens. The <b>Proliferating / PR0</b> label failed marker
+validation on this slide: only 27.7% detect any cycling transcript and 43.9% are CD3+, so it absorbs T cells
+rather than marking cycling ones. Do not read it as a proliferation measure. Cells failing QC
+(&lt; 100 counts, or &gt; 2% negative-probe fraction) appear as <code>QC_removed</code>. Each cluster code carries
+its <b>biological annotation</b> under the code in the legend and in the hover tooltip; an orange <b>&#9888;</b>
+marks a label this slide&rsquo;s own markers do not support &mdash; hover it for the evidence. Full table:
+<code>analysis_inhouse/palette/subcluster_annotations.csv</code>.</div>
+</body></html>

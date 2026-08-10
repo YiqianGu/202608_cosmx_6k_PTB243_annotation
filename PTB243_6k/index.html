@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spatial Transcriptomics Viewer</title>
+<script src="https://unpkg.com/deck.gl@9.0.16/dist.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; display: flex; height: 100vh; overflow: hidden; }
+
+/* Sidebar */
+#sidebar {
+  width: 300px; min-width: 300px; background: #16213e; display: flex; flex-direction: column;
+  border-right: 1px solid #0f3460; overflow: hidden; z-index: 10;
+}
+#sidebar-header { padding: 16px; border-bottom: 1px solid #0f3460; }
+#sidebar-header h1 { font-size: 16px; color: #e94560; margin-bottom: 4px; }
+#sidebar-header .stats { font-size: 12px; color: #888; }
+#sidebar-content { flex: 1; overflow-y: auto; padding: 12px; }
+
+/* Mode toggle */
+.mode-toggle { display: flex; gap: 0; margin-bottom: 12px; }
+.mode-btn {
+  flex: 1; padding: 8px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600;
+  background: #1a1a2e; border: 1px solid #0f3460; color: #888; transition: all 0.2s;
+}
+.mode-btn:first-child { border-radius: 6px 0 0 6px; }
+.mode-btn:last-child { border-radius: 0 6px 6px 0; }
+.mode-btn.active { background: #0f3460; color: #e94560; border-color: #e94560; }
+
+/* Sections */
+.section { margin-bottom: 16px; }
+.section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: #888; margin-bottom: 8px; letter-spacing: 0.5px; }
+
+/* Cell type list */
+#celltype-list { max-height: calc(100vh - 440px); overflow-y: auto; }
+.ct-row {
+  display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; cursor: pointer; font-size: 13px;
+}
+.ct-row:hover { background: rgba(255,255,255,0.05); }
+.ct-row input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
+.ct-row input[type="color"] {
+  width: 22px; height: 22px; border: none; cursor: pointer; background: none; padding: 0; flex-shrink: 0;
+  border-radius: 3px;
+}
+.ct-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+.ct-row input[type="color"]::-webkit-color-swatch { border: 1px solid #555; border-radius: 2px; }
+.ct-label { flex: 1; min-width: 0; user-select: none; line-height: 1.25; }
+.ct-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Biological annotation of the cluster code (subcluster_annotations.csv) */
+.ct-annot { font-size: 10.5px; color: #7f8fb0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-annot.flagged { color: #e9a145; }
+.ct-annot .ct-flag { font-weight: 700; }
+.ct-count { font-size: 11px; color: #666; flex-shrink: 0; }
+
+/* Bulk actions */
+.bulk-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.bulk-btn {
+  font-size: 11px; color: #e94560; cursor: pointer; background: none; border: none; text-decoration: underline;
+}
+
+/* Gene search */
+#gene-section { display: none; }
+#gene-search {
+  width: 100%; padding: 8px 10px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 6px;
+  color: #e0e0e0; font-size: 13px; outline: none;
+}
+#gene-search:focus { border-color: #e94560; }
+#gene-dropdown {
+  max-height: 200px; overflow-y: auto; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 0 0 6px 6px;
+  display: none; margin-top: -1px;
+}
+.gene-option {
+  padding: 6px 10px; cursor: pointer; font-size: 13px;
+}
+.gene-option:hover, .gene-option.highlighted { background: #0f3460; }
+#current-gene { margin-top: 8px; font-size: 13px; }
+#clear-gene-btn {
+  font-size: 11px; color: #e94560; cursor: pointer; background: none; border: none;
+  text-decoration: underline; margin-left: 8px;
+}
+
+/* Protein marker buttons */
+.protein-section { margin-bottom: 12px; }
+.protein-category { margin-bottom: 6px; }
+.protein-category-label { font-size: 11px; color: #666; margin-bottom: 3px; }
+.protein-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+.protein-btn {
+  padding: 4px 8px; font-size: 11px; background: #1a1a2e; border: 1px solid #0f3460;
+  border-radius: 4px; color: #aaa; cursor: pointer; transition: all 0.15s;
+}
+.protein-btn:hover { border-color: #e94560; color: #e0e0e0; }
+.protein-btn.active { background: #0f3460; border-color: #e94560; color: #e94560; font-weight: 600; }
+
+/* Colormap dropdown */
+.colormap-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 4px; }
+.colormap-row label { font-size: 12px; color: #888; white-space: nowrap; }
+#colormap-select {
+  flex: 1; padding: 4px 6px; background: #1a1a2e; border: 1px solid #0f3460; border-radius: 4px;
+  color: #e0e0e0; font-size: 12px; outline: none; cursor: pointer;
+}
+#colormap-select:focus { border-color: #e94560; }
+
+/* Color scale legend for expression */
+#expression-legend { display: none; margin-top: 12px; }
+#legend-gradient {
+  width: 100%; height: 14px; border-radius: 3px;
+  background: linear-gradient(to right, #440154, #482777, #3e4989, #31688e, #26828e, #1f9e89, #35b779, #6ece58, #b5de2b, #fde725);
+}
+#legend-labels { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-top: 2px; }
+
+/* Selection summary bar */
+#selection-summary {
+  padding: 10px 14px; border-top: 1px solid #0f3460; font-size: 13px; color: #e0e0e0;
+  background: rgba(15,52,96,0.5);
+}
+#selection-summary .summary-count { color: #e94560; font-weight: 700; font-size: 14px; }
+#selection-summary .summary-types {
+  margin-top: 6px; font-size: 11px; color: #aaa; line-height: 1.6;
+  max-height: 120px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px 6px;
+}
+.summary-chip {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+.chip-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* Background color row */
+.bg-color-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.bg-color-row label { font-size: 12px; color: #888; white-space: nowrap; }
+.bg-color-row input[type="color"] {
+  width: 28px; height: 22px; border: none; cursor: pointer; background: none; padding: 0;
+  border-radius: 3px;
+}
+.bg-color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+.bg-color-row input[type="color"]::-webkit-color-swatch { border: 1px solid #555; border-radius: 2px; }
+.bg-color-label { font-size: 12px; color: #e0e0e0; }
+
+/* Bottom buttons */
+#sidebar-footer { padding: 12px; border-top: 1px solid #0f3460; display: flex; gap: 8px; flex-wrap: wrap; }
+.action-btn {
+  flex: 1; padding: 8px; text-align: center; background: #0f3460; border: 1px solid #0f3460;
+  border-radius: 6px; color: #e0e0e0; cursor: pointer; font-size: 12px; transition: background 0.2s;
+  min-width: 80px;
+}
+.action-btn:hover { background: #e94560; }
+
+/* Tooltip */
+#tooltip {
+  position: fixed; pointer-events: none; background: rgba(22,33,62,0.95); border: 1px solid #0f3460;
+  border-radius: 6px; padding: 8px 12px; font-size: 12px; z-index: 100; display: none;
+  max-width: 280px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+#tooltip .tt-label { color: #888; font-size: 11px; }
+#tooltip .tt-value { color: #e0e0e0; margin-bottom: 4px; }
+
+/* Loading overlay */
+#loading {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(26,26,46,0.95);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+}
+#loading .spinner { width: 40px; height: 40px; border: 3px solid #0f3460; border-top-color: #e94560; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-text { margin-top: 16px; color: #888; font-size: 14px; }
+
+/* Canvas container */
+#deck-container { flex: 1; position: relative; }
+#deck-canvas { width: 100%; height: 100%; }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  #sidebar { position: fixed; left: -300px; transition: left 0.3s; height: 100vh; z-index: 20; }
+  #sidebar.open { left: 0; }
+  #menu-toggle {
+    position: fixed; top: 12px; left: 12px; z-index: 15; background: #16213e; border: 1px solid #0f3460;
+    color: #e0e0e0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 18px; display: block;
+  }
+}
+@media (min-width: 769px) { #menu-toggle { display: none; } }
+
+/* Slider rows */
+.slider-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.slider-row label { font-size: 12px; color: #888; white-space: nowrap; }
+.slider-row input[type="range"] { flex: 1; }
+.slider-row .slider-val { font-size: 12px; color: #e0e0e0; min-width: 20px; text-align: right; }
+
+/* ---- Highlight feature ---- */
+/* Per-legend-row toggle. A ring is drawn around every cell of the label so it
+   can be found at low zoom without hiding its own colour or its neighbours. */
+.ct-hl {
+  flex: 0 0 auto; width: 18px; height: 18px; padding: 0; line-height: 1;
+  font-size: 11px; cursor: pointer; border-radius: 4px;
+  background: transparent; color: #55607a; border: 1px solid #2a3550;
+}
+.ct-hl:hover { color: #9fb4d8; border-color: #47597f; }
+.ct-hl.active { background: #ffd54f; color: #1a1a2e; border-color: #ffd54f; font-weight: 700; }
+#highlight-block { border-top: 1px solid #0f3460; margin-top: 10px; padding-top: 10px; }
+#highlight-ids {
+  width: 100%; height: 54px; resize: vertical; font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px; background: #1a1a2e; color: #e0e0e0;
+  border: 1px solid #0f3460; border-radius: 6px; padding: 5px; outline: none;
+}
+.hl-btn-row { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+.hl-btn {
+  flex: 1; padding: 5px 8px; font-size: 11px; cursor: pointer; border-radius: 6px;
+  background: #16213e; color: #cfd8ea; border: 1px solid #0f3460;
+}
+.hl-btn:hover { background: #1d2b4f; }
+#highlight-status { font-size: 10px; color: #8892a8; margin-top: 5px; min-height: 12px; }
+
+/* Render mode toggle */
+.render-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.render-toggle label { font-size: 12px; color: #888; }
+.toggle-switch {
+  position: relative; width: 44px; height: 22px; background: #1a1a2e; border: 1px solid #0f3460;
+  border-radius: 11px; cursor: pointer; transition: background 0.2s;
+}
+.toggle-switch.active { background: #0f3460; border-color: #e94560; }
+.toggle-switch .toggle-knob {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888;
+  border-radius: 50%; transition: all 0.2s;
+}
+.toggle-switch.active .toggle-knob { left: 24px; background: #e94560; }
+.toggle-label { font-size: 12px; color: #e0e0e0; }
+</style>
+</head>
+<body>
+
+<button id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1 id="dataset-name">Loading...</h1>
+    <div class="stats" id="dataset-stats"></div>
+  </div>
+  <div id="sidebar-content">
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <div class="mode-btn active" id="mode-celltype" onclick="setMode('celltype')">Cell Type</div>
+      <div class="mode-btn" id="mode-expression" onclick="setMode('expression')">Expression</div>
+    </div>
+
+    <!-- Render mode: Points vs Polygons -->
+    <div class="render-toggle" id="render-toggle-row">
+      <label>Render:</label>
+      <span class="toggle-label">Points</span>
+      <div class="toggle-switch" id="poly-toggle" onclick="toggleRenderMode()">
+        <div class="toggle-knob"></div>
+      </div>
+      <span class="toggle-label">Polygons</span>
+    </div>
+
+    <!-- Point size slider (only in point mode) -->
+    <div class="slider-row" id="point-size-row">
+      <label>Point size</label>
+      <input type="range" id="point-size-slider" min="1" max="20" value="4" oninput="setPointSize(this.value)">
+      <span class="slider-val" id="point-size-val">4</span>
+    </div>
+
+    <!-- Polygon outline slider (only in polygon mode) -->
+    <div class="slider-row" id="poly-outline-row" style="display:none;">
+      <label>Outline</label>
+      <input type="range" id="poly-outline-slider" min="0" max="3" value="0.5" step="0.1" oninput="setPolyOutline(this.value)">
+      <span class="slider-val" id="poly-outline-val">0.5</span>
+    </div>
+
+    <!-- Highlight controls. Works in BOTH point and polygon mode, because the
+         highlight is a ring overlay rather than a change to the cell geometry. -->
+    <div id="highlight-block">
+      <div class="slider-row" style="margin-bottom:6px;">
+        <label>Highlight size</label>
+        <input type="range" id="highlight-scale-slider" min="1" max="10" value="3" step="0.5" oninput="setHighlightScale(this.value)">
+        <span class="slider-val" id="highlight-scale-val">3</span>
+      </div>
+      <div style="font-size:11px; color:#888; margin-bottom:4px;">
+        Click <span style="color:#ffd54f;">◎</span> on any legend row to ring those cells, or paste cell IDs:
+      </div>
+      <textarea id="highlight-ids" spellcheck="false"
+                placeholder="PTB243_6k_c_1_1, PTB243_6k_c_1_2 …  (comma / space / newline separated)"></textarea>
+      <div class="hl-btn-row">
+        <button class="hl-btn" onclick="applyHighlightIds()">Highlight IDs</button>
+        <button class="hl-btn" onclick="clearHighlights()">Clear all</button>
+      </div>
+      <div id="highlight-status"></div>
+    </div>
+
+    <!-- Background color -->
+    <div class="bg-color-row">
+      <label>Background</label>
+      <input type="color" id="bg-color-picker" value="#1a1a2e" oninput="setBgColor(this.value)">
+      <span class="bg-color-label" id="bg-color-label">#1a1a2e</span>
+    </div>
+
+    <!-- Annotation layer selector -->
+    <div class="section" id="annotation-section" style="display:none; margin-bottom: 12px;">
+      <div class="section-title">Annotation Layer</div>
+      <select id="annotation-select" style="width:100%; padding:6px 8px; background:#1a1a2e; border:1px solid #0f3460; border-radius:6px; color:#e0e0e0; font-size:13px; cursor:pointer; outline:none;">
+      </select>
+    </div>
+
+    <!-- Cell type section -->
+    <div id="celltype-section">
+      <div class="section">
+        <div class="section-title">Cell Types</div>
+        <div class="bulk-actions">
+          <button class="bulk-btn" onclick="toggleAll(true)">Select All</button>
+          <button class="bulk-btn" onclick="toggleAll(false)">Deselect All</button>
+        </div>
+        <div id="celltype-list"></div>
+      </div>
+    </div>
+
+    <!-- Gene expression section -->
+    <div id="gene-section">
+      <!-- Protein markers (populated dynamically) -->
+      <div class="section" id="protein-section" style="display:none;">
+        <div class="section-title">Protein Markers</div>
+        <div id="protein-buttons"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Gene Expression</div>
+        <input type="text" id="gene-search" placeholder="Search genes..." autocomplete="off">
+        <div id="gene-dropdown"></div>
+        <div id="current-gene"></div>
+        <div class="colormap-row">
+          <label>Colormap</label>
+          <select id="colormap-select">
+            <option value="viridis">Viridis</option>
+            <option value="inferno">Inferno</option>
+            <option value="plasma">Plasma</option>
+            <option value="magma">Magma</option>
+            <option value="turbo">Turbo</option>
+            <option value="whitered">White → Red</option>
+          </select>
+        </div>
+        <div id="expression-legend">
+          <div id="legend-gradient"></div>
+          <div id="legend-labels"><span id="legend-min">0</span><span>Expression</span><span id="legend-max">1</span></div>
+        </div>
+      </div>
+
+      <!-- Cell types still shown in expression mode for reference -->
+      <div class="section" style="margin-top: 12px;">
+        <div class="section-title">Visible Cell Types</div>
+        <div class="bulk-actions">
+          <button class="bulk-btn" onclick="toggleAll(true)">Select All</button>
+          <button class="bulk-btn" onclick="toggleAll(false)">Deselect All</button>
+        </div>
+        <div id="celltype-list-expr"></div>
+      </div>
+    </div>
+  </div>
+  <div id="selection-summary"></div>
+  <div id="sidebar-footer">
+    <button class="action-btn" onclick="resetView()">Reset View</button>
+    <button class="action-btn" onclick="takeScreenshot()">Screenshot</button>
+  </div>
+</div>
+
+<div id="deck-container">
+  <div id="deck-canvas"></div>
+</div>
+
+<div id="tooltip"></div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loading-text">Loading spatial data...</div>
+</div>
+
+<script>
+// ============================================================================
+// Global State
+// ============================================================================
+let cellData = null;       // {x:[], y:[], celltype:[], celltype_rescued:[], cell_id:[]}
+let metadata = null;       // {dataset_name, n_cells, cell_types, bounds, annotations, ...}
+let geneList = null;       // {geneName: filename, ...}
+let currentMode = 'celltype';
+let currentAnnotation = 'celltype'; // which celltype array to use
+let currentGene = null;
+let currentGeneExpr = null;
+let celltypeVisible = {};  // {typeName: bool}
+let celltypeColors = {};   // {typeName: [r,g,b]}
+let deckgl = null;
+let pointRadius = 4;
+let polyOutlineWidth = 0.5;
+let renderMode = 'points'; // 'points' or 'polygons'
+
+// ---- Highlight state ----
+// Highlighting is implemented as a SEPARATE overlay layer, never as a per-cell
+// radius accessor on the base layer. Reasons: the base ScatterplotLayer uses
+// data:{length:N} with a scalar getRadius, so a per-cell callback would run over
+// all 463k cells on every update; radiusMaxPixels:20 would clamp the growth
+// anyway, and raising it would affect the non-highlighted cells too; and
+// SolidPolygonLayer geometry cannot grow at all, so polygon mode could not be
+// supported. A ring drawn on top is not geometry, so it works in both modes.
+let highlightLabels = {};   // {label: true} — legend rows toggled on
+let highlightIdSet = null;  // Set of cell_id strings pasted by the user
+let highlightIdx = null;    // Uint32Array of cell indices, or null
+let highlightScale = 3;     // ring size multiplier
+let highlightVersion = 0;   // bumped on every selection change -> updateTrigger
+
+// Pre-built typed arrays for performance
+let positions = null;      // Float64Array(N*3)
+let colors = null;         // Uint8Array(N*4)
+
+// Polygon data (binary)
+let polyCoords = null;     // Float32Array — interleaved [x0,y0,x1,y1,...]
+let polyOffsets = null;     // Uint32Array — start index per cell (N+1 entries)
+let hasPolygons = false;
+
+// Per-cell polygon arrays for deck.gl (built once)
+let polygonData = null;    // Array of {polygon: [[x,y],...], index: i}
+let captureScreenshot = false; // flag for screenshot capture
+
+// ============================================================================
+// Default 28-color palette (distinguishable)
+// ============================================================================
+const DEFAULT_PALETTE = [
+  [230, 25, 75],   [60, 180, 75],   [255, 225, 25],  [0, 130, 200],
+  [245, 130, 48],  [145, 30, 180],  [70, 240, 240],  [240, 50, 230],
+  [210, 245, 60],  [250, 190, 212], [0, 128, 128],   [220, 190, 255],
+  [170, 110, 40],  [255, 250, 200], [128, 0, 0],     [170, 255, 195],
+  [128, 128, 0],   [255, 215, 180], [0, 0, 128],     [128, 128, 128],
+  [230, 190, 255], [255, 127, 80],  [100, 149, 237], [144, 238, 144],
+  [255, 182, 193], [218, 165, 32],  [72, 209, 204],  [255, 99, 71],
+  [147, 112, 219], [60, 179, 113],  [255, 165, 0],   [106, 90, 205]
+];
+
+// Colormaps (10 stops each for interpolation)
+const COLORMAPS = {
+  viridis: [
+    [68, 1, 84], [72, 39, 119], [62, 73, 137], [49, 104, 142],
+    [38, 130, 142], [31, 158, 137], [53, 183, 121], [110, 206, 88],
+    [181, 222, 43], [253, 231, 37]
+  ],
+  inferno: [
+    [0, 0, 4], [22, 11, 57], [66, 10, 104], [106, 23, 110],
+    [147, 38, 103], [188, 55, 84], [221, 81, 58], [243, 120, 25],
+    [249, 178, 33], [252, 255, 164]
+  ],
+  plasma: [
+    [13, 8, 135], [65, 4, 157], [106, 0, 168], [143, 13, 164],
+    [177, 42, 144], [204, 71, 120], [225, 100, 98], [242, 132, 75],
+    [252, 175, 46], [240, 249, 33]
+  ],
+  magma: [
+    [0, 0, 4], [18, 14, 54], [51, 16, 104], [89, 26, 120],
+    [130, 37, 129], [170, 51, 119], [209, 70, 101], [236, 105, 80],
+    [251, 163, 83], [252, 253, 191]
+  ],
+  turbo: [
+    [48, 18, 59], [70, 107, 227], [40, 170, 225], [29, 220, 158],
+    [95, 247, 78], [175, 240, 18], [234, 200, 12], [253, 141, 14],
+    [234, 72, 11], [122, 4, 3]
+  ],
+  whitered: [
+    [255, 255, 255], [254, 232, 222], [252, 207, 188], [252, 174, 145],
+    [251, 138, 113], [251, 106, 84], [239, 59, 44], [203, 24, 29],
+    [165, 15, 21], [103, 0, 13]
+  ]
+};
+
+// Legacy alias (used by rebuildColors)
+const VIRIDIS = COLORMAPS.viridis;
+
+let currentColormap = 'viridis';
+
+// Protein state
+let proteinList = null;    // {proteinName: filename, ...} or null
+let currentProtein = null; // name of active protein or null
+
+// ============================================================================
+// Initialization
+// ============================================================================
+async function init() {
+  setLoadingText('Loading cell positions...');
+  const cellsResp = await fetch('data/cells.json');
+  cellData = await cellsResp.json();
+
+  setLoadingText('Loading metadata...');
+  const metaResp = await fetch('data/metadata.json');
+  metadata = await metaResp.json();
+
+  setLoadingText('Loading gene list...');
+  const geneResp = await fetch('data/gene_list.json');
+  geneList = await geneResp.json();
+
+  // Update UI header
+  document.getElementById('dataset-name').textContent = metadata.dataset_name;
+  document.getElementById('dataset-stats').textContent =
+    `${metadata.n_cells.toLocaleString()} cells · ${metadata.n_celltypes} types · ${metadata.n_genes} genes`;
+
+  // Initialize colors and visibility from localStorage or defaults
+  loadColorPreferences();
+
+  // Build typed arrays for point rendering
+  setLoadingText('Building render buffers...');
+  await buildArrays();
+
+  // Load polygon data if available
+  if (metadata.has_polygons) {
+    setLoadingText('Loading polygon shapes...');
+    try {
+      const [coordsBuf, offsetsBuf] = await Promise.all([
+        fetch('data/poly_coords.bin').then(r => r.arrayBuffer()),
+        fetch('data/poly_offsets.bin').then(r => r.arrayBuffer())
+      ]);
+      polyCoords = new Float32Array(coordsBuf);
+      polyOffsets = new Uint32Array(offsetsBuf);
+      hasPolygons = true;
+
+      // polygons built lazily on first toggle (avoids load-time heap/GPU spike)
+    } catch (e) {
+      console.warn('Polygon data not available:', e);
+      hasPolygons = false;
+    }
+  }
+
+  // Show/hide polygon toggle
+  if (!hasPolygons) {
+    document.getElementById('render-toggle-row').style.display = 'none';
+  }
+
+  // Load protein list (optional — backward compatible)
+  try {
+    const protResp = await fetch('data/protein_list.json');
+    if (protResp.ok) {
+      proteinList = await protResp.json();
+    }
+  } catch (e) { /* no proteins available */ }
+
+  // Build annotation layer dropdown if multiple annotations available
+  if (metadata.annotations) {
+    const annSection = document.getElementById('annotation-section');
+    const annSelect = document.getElementById('annotation-select');
+    const keys = Object.keys(metadata.annotations);
+    if (keys.length > 1) {
+      annSection.style.display = 'block';
+      keys.forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = metadata.annotations[key].label || key;
+        annSelect.appendChild(opt);
+      });
+      annSelect.value = currentAnnotation;
+      annSelect.addEventListener('change', () => switchAnnotation(annSelect.value));
+    }
+  }
+
+  // Build UI
+  buildCelltypeUI();
+  buildGeneSearch();
+  buildProteinButtons();
+  loadColormapPreference();
+  loadBgColor();
+  updateSelectionSummary();
+
+  // Initialize deck.gl
+  setLoadingText('Initializing renderer...');
+  initDeck();
+
+  // Check URL hash for shared state
+  restoreFromHash();
+
+  // Hide loading
+  document.getElementById('loading').style.display = 'none';
+}
+
+function setLoadingText(text) {
+  document.getElementById('loading-text').textContent = text;
+}
+
+// ============================================================================
+// Color Preferences (localStorage)
+// ============================================================================
+function loadColorPreferences() {
+  const saved = localStorage.getItem('spatial_viewer_colors');
+  const savedObj = saved ? JSON.parse(saved) : {};
+
+  metadata.cell_types.forEach((ct, i) => {
+    if (savedObj[ct]) {
+      celltypeColors[ct] = savedObj[ct];
+    } else {
+      celltypeColors[ct] = DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+    }
+    celltypeVisible[ct] = true;
+  });
+}
+
+function saveColorPreferences() {
+  localStorage.setItem('spatial_viewer_colors', JSON.stringify(celltypeColors));
+}
+
+// ============================================================================
+// Build Typed Arrays (for point rendering)
+// ============================================================================
+async function buildArrays() {
+  const N = cellData.x.length;
+  positions = new Float64Array(N * 3);
+  colors = new Uint8Array(N * 4);
+
+  for (let i = 0; i < N; i++) {
+    positions[i * 3]     = cellData.x[i];
+    positions[i * 3 + 1] = cellData.y[i];
+    positions[i * 3 + 2] = 0;
+  }
+
+  rebuildColors();
+}
+
+// ============================================================================
+// Build Polygon Data (for polygon rendering)
+// ============================================================================
+function buildPolygonData() {
+  const N = cellData.x.length;
+  polygonData = new Array(N);
+
+  for (let i = 0; i < N; i++) {
+    const startVert = polyOffsets[i];
+    const endVert = polyOffsets[i + 1];
+    const nVerts = endVert - startVert;
+
+    if (nVerts > 0) {
+      const ring = new Array(nVerts);
+      for (let v = 0; v < nVerts; v++) {
+        const ci = (startVert + v) * 2;
+        ring[v] = [polyCoords[ci], polyCoords[ci + 1]];
+      }
+      polygonData[i] = { polygon: ring, index: i };
+    } else {
+      polygonData[i] = { polygon: [[0,0],[0,0],[0,0]], index: i };
+    }
+  }
+}
+
+function rebuildColors() {
+  const N = cellData.x.length;
+
+  if (currentMode === 'celltype') {
+    for (let i = 0; i < N; i++) {
+      const ct = getCelltype(i);
+      const rgb = celltypeColors[ct] || [128, 128, 128];
+      const visible = celltypeVisible[ct] !== false;
+      colors[i * 4]     = rgb[0];
+      colors[i * 4 + 1] = rgb[1];
+      colors[i * 4 + 2] = rgb[2];
+      colors[i * 4 + 3] = visible ? 220 : 0;
+    }
+  } else if (currentMode === 'expression' && currentGeneExpr) {
+    const expr = currentGeneExpr;
+    const maxVal = expr.maxVal || 1;
+    for (let i = 0; i < N; i++) {
+      const ct = getCelltype(i);
+      const visible = celltypeVisible[ct] !== false;
+      const val = expr.dense[i];
+      if (!visible) {
+        colors[i * 4 + 3] = 0;
+        continue;
+      }
+      if (val === 0) {
+        colors[i * 4]     = 30;
+        colors[i * 4 + 1] = 30;
+        colors[i * 4 + 2] = 30;
+        colors[i * 4 + 3] = 100;
+      } else {
+        const t = Math.max(0, Math.min(val / maxVal, 1));
+        const rgb = colormapInterp(t);
+        colors[i * 4]     = rgb[0];
+        colors[i * 4 + 1] = rgb[1];
+        colors[i * 4 + 2] = rgb[2];
+        colors[i * 4 + 3] = 220;
+      }
+    }
+  } else {
+    // Expression mode but no gene loaded — show cell types dimmed
+    for (let i = 0; i < N; i++) {
+      const ct = getCelltype(i);
+      const visible = celltypeVisible[ct] !== false;
+      colors[i * 4]     = 80;
+      colors[i * 4 + 1] = 80;
+      colors[i * 4 + 2] = 80;
+      colors[i * 4 + 3] = visible ? 80 : 0;
+    }
+  }
+}
+
+function colormapInterp(t) {
+  const stops = COLORMAPS[currentColormap] || COLORMAPS.viridis;
+  const idx = t * (stops.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.min(lo + 1, stops.length - 1);
+  const f = idx - lo;
+  return [
+    Math.round(stops[lo][0] * (1 - f) + stops[hi][0] * f),
+    Math.round(stops[lo][1] * (1 - f) + stops[hi][1] * f),
+    Math.round(stops[lo][2] * (1 - f) + stops[hi][2] * f)
+  ];
+}
+
+// Helper: get active celltype array
+function getCelltype(i) {
+  return cellData[currentAnnotation][i];
+}
+
+// ============================================================================
+// Highlight
+// ============================================================================
+
+// Build the compact index array of highlighted cells. Called only when the
+// selection changes (not on every render), so the O(N) scan is cheap.
+// Hidden cells are excluded here rather than in the accessor, so the overlay can
+// never contradict the visibility checkboxes.
+function rebuildHighlightIdx() {
+  const anyLabel = Object.keys(highlightLabels).length > 0;
+  const anyId = highlightIdSet && highlightIdSet.size > 0;
+  if (!cellData || (!anyLabel && !anyId)) {
+    highlightIdx = null;
+    highlightVersion++;
+    return;
+  }
+  const N = cellData.x.length;
+  const out = [];
+  for (let i = 0; i < N; i++) {
+    const ct = getCelltype(i);
+    if (celltypeVisible[ct] === false) continue;
+    if (anyLabel && highlightLabels[ct]) { out.push(i); continue; }
+    if (anyId && highlightIdSet.has(cellData.cell_id[i])) out.push(i);
+  }
+  highlightIdx = new Uint32Array(out);
+  highlightVersion++;
+}
+
+// The overlay. Reads the shared `colors` buffer but never writes it, so
+// rebuildColors() is untouched and a highlighted cell keeps its legend colour.
+function createHighlightLayer() {
+  if (!highlightIdx || highlightIdx.length === 0) return [];
+  return [new deck.ScatterplotLayer({
+    id: 'cell-highlight',
+    data: { length: highlightIdx.length },
+    getPosition: (_, {index}) => {
+      const i = highlightIdx[index];
+      return [positions[i * 3], positions[i * 3 + 1], 0];
+    },
+    getRadius: pointRadius * highlightScale,
+    radiusUnits: 'common',
+    radiusMinPixels: 3,
+    radiusMaxPixels: 20 * highlightScale,   // own clamp; base layer's 20px untouched
+    filled: false,
+    stroked: true,                          // a RING, not a disc: keeps the map legible
+    getLineColor: (_, {index}) => {
+      const i = highlightIdx[index];
+      return [colors[i * 4], colors[i * 4 + 1], colors[i * 4 + 2], 255];
+    },
+    getLineWidth: pointRadius * highlightScale * 0.35,
+    lineWidthUnits: 'common',
+    lineWidthMinPixels: 1.5,
+    lineWidthMaxPixels: 6,
+    pickable: false,                        // never steal picking from the base layer
+    updateTriggers: {
+      getPosition:  [highlightVersion],
+      getLineColor: [highlightVersion, JSON.stringify(celltypeColors)],
+      getRadius:    [pointRadius, highlightScale],
+      getLineWidth: [pointRadius, highlightScale]
+    },
+    parameters: { depthTest: false }
+  })];
+}
+
+function setHighlightScale(val) {
+  highlightScale = Number(val);
+  document.getElementById('highlight-scale-val').textContent = val;
+  updateLayer();
+}
+
+function toggleHighlightLabel(ct) {
+  if (highlightLabels[ct]) delete highlightLabels[ct]; else highlightLabels[ct] = true;
+  syncHighlightButtons(ct);
+  rebuildHighlightIdx();
+  updateLayer();
+}
+
+function syncHighlightButtons(ct) {
+  document.querySelectorAll(`.ct-row[data-celltype="${CSS.escape(ct)}"] .ct-hl`).forEach(b => {
+    b.classList.toggle('active', !!highlightLabels[ct]);
+  });
+}
+
+// The viewer stores Giotto-style IDs (`c_1_<fov>_<cell>`) but the analysis
+// tables use Seurat-style IDs (`PTB243_6k_c_<fov>_<cell>`) for the same cell.
+// Accept either, so a list pasted from ANY table in the analysis tree just works.
+// Non-greedy up to the FIRST "_c_", because the sample name itself contains an
+// underscore (PTB243_6k). Mirrors the R-side mapping in 5_export_web_viewers.R:
+//   bare_id <- sub(paste0('^', sn, '_c_'), 'c_1_', cell_ID)
+// Viewer-native IDs ("c_1_100_1") contain no "_c_" and are left untouched.
+function normalizeCellId(id) {
+  return id.replace(/^.+?_c_/, 'c_1_');
+}
+
+// Paste-in list of cell IDs — this is exactly what the analysis scripts emit
+// (e.g. early_activation/09_EAT_cell_ids.txt), so a result set can be located on
+// the slide without re-exporting anything.
+function applyHighlightIds() {
+  const raw = document.getElementById('highlight-ids').value || '';
+  const ids = raw.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+  const statusEl = document.getElementById('highlight-status');
+  if (ids.length === 0) {
+    highlightIdSet = null;
+    rebuildHighlightIdx();
+    updateLayer();
+    statusEl.textContent = '';
+    return;
+  }
+  const known = new Set(cellData.cell_id);
+  let matched = 0;
+  highlightIdSet = new Set();
+  ids.forEach(id => {
+    const cand = known.has(id) ? id : normalizeCellId(id);
+    if (known.has(cand)) { highlightIdSet.add(cand); matched++; }
+  });
+  rebuildHighlightIdx();
+  updateLayer();
+  statusEl.textContent = `${matched.toLocaleString()} matched / ${ids.length.toLocaleString()} pasted` +
+    (matched < ids.length ? ' — unmatched IDs ignored' : '');
+}
+
+function clearHighlights() {
+  highlightLabels = {};
+  highlightIdSet = null;
+  document.getElementById('highlight-ids').value = '';
+  document.getElementById('highlight-status').textContent = '';
+  document.querySelectorAll('.ct-hl.active').forEach(b => b.classList.remove('active'));
+  rebuildHighlightIdx();
+  updateLayer();
+}
+
+// Annotation layer switching
+function switchAnnotation(key) {
+  currentAnnotation = key;
+  // Label highlights do NOT carry across annotation layers — the label sets are
+  // different, so a stale entry would silently highlight nothing, or (worse) a
+  // same-named label in the new layer. Pasted cell IDs DO carry across, since a
+  // cell_id means the same thing in every layer.
+  highlightLabels = {};
+  // Update metadata.cell_types to match selected annotation
+  if (metadata.annotations && metadata.annotations[key]) {
+    metadata.cell_types = metadata.annotations[key].cell_types;
+    metadata.n_celltypes = metadata.annotations[key].n_celltypes;
+  }
+  // Re-initialize colors for new cell types
+  const saved = localStorage.getItem('spatial_viewer_colors');
+  const savedObj = saved ? JSON.parse(saved) : {};
+  celltypeColors = {};
+  celltypeVisible = {};
+  metadata.cell_types.forEach((ct, i) => {
+    celltypeColors[ct] = savedObj[ct] || DEFAULT_PALETTE[i % DEFAULT_PALETTE.length];
+    celltypeVisible[ct] = true;
+  });
+  // Rebuild UI and re-render
+  buildCelltypeUI();
+  rebuildHighlightIdx();
+  updateSelectionSummary();
+  updateLayer();
+}
+
+// Legacy alias
+function viridisInterp(t) { return colormapInterp(t); }
+
+// ============================================================================
+// deck.gl Initialization
+// ============================================================================
+function initDeck() {
+  const bounds = metadata.bounds;
+  const cx = (bounds.x_min + bounds.x_max) / 2;
+  const cy = (bounds.y_min + bounds.y_max) / 2;
+  const rangeX = bounds.x_max - bounds.x_min;
+  const rangeY = bounds.y_max - bounds.y_min;
+  const container = document.getElementById('deck-canvas');
+  const zoom = Math.log2(Math.min(container.clientWidth / rangeX, container.clientHeight / rangeY)) - 0.5;
+
+  deckgl = new deck.DeckGL({
+    container: 'deck-canvas',
+    useDevicePixels: false,   // render at CSS px, not 2x device px — avoids GPU OOM on 4K/Retina
+    views: new deck.OrthographicView(),
+    initialViewState: {
+      target: [cx, cy, 0],
+      zoom: zoom,
+      minZoom: -10,
+      maxZoom: 10
+    },
+    controller: true,
+    layers: createLayers(),
+    getTooltip: getTooltipInfo,
+    onViewStateChange: ({viewState}) => {
+      updateHash(viewState);
+    },
+    onAfterRender: () => {
+      if (captureScreenshot) {
+        captureScreenshot = false;
+        const canvas = document.querySelector('#deck-canvas canvas');
+        if (canvas) saveCanvasWithBackground(canvas);
+      }
+    }
+  });
+}
+
+function createLayers() {
+  const N = cellData.x.length;
+  const colorTrigger = [currentMode, currentGene, currentProtein, currentColormap, JSON.stringify(celltypeVisible), JSON.stringify(celltypeColors)];
+
+  if (renderMode === 'polygons' && hasPolygons) {
+    const layers = [
+      new deck.SolidPolygonLayer({
+        id: 'cell-polygons',
+        data: polygonData,
+        getPolygon: d => d.polygon,
+        getFillColor: d => {
+          const i = d.index;
+          return [colors[i * 4], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]];
+        },
+        pickable: true,
+        filled: true,
+        updateTriggers: {
+          getFillColor: colorTrigger
+        },
+        parameters: { depthTest: false }
+      })
+    ];
+
+    // Add outline layer if outline width > 0
+    if (polyOutlineWidth > 0) {
+      layers.push(new deck.PathLayer({
+        id: 'cell-outlines',
+        data: polygonData,
+        getPath: d => {
+          const ring = d.polygon;
+          // Close the ring if not already closed
+          if (ring.length > 0) {
+            const first = ring[0], last = ring[ring.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+              return [...ring, ring[0]];
+            }
+          }
+          return ring;
+        },
+        getColor: d => {
+          const i = d.index;
+          const a = colors[i * 4 + 3];
+          return a > 0 ? [60, 60, 80, Math.min(a, 150)] : [0, 0, 0, 0];
+        },
+        getWidth: polyOutlineWidth,
+        widthUnits: 'common',
+        widthMinPixels: 0.3,
+        widthMaxPixels: 3,
+        pickable: false,
+        updateTriggers: {
+          getColor: colorTrigger,
+          getWidth: [polyOutlineWidth]
+        },
+        parameters: { depthTest: false }
+      }));
+    }
+
+    // Highlight ring last, so highlighted cells are never occluded by neighbours.
+    return layers.concat(createHighlightLayer());
+  } else {
+    return [new deck.ScatterplotLayer({
+      id: 'cells',
+      data: {length: N},
+      getPosition: (_, {index}) => [positions[index * 3], positions[index * 3 + 1], 0],
+      getFillColor: (_, {index}) => [colors[index * 4], colors[index * 4 + 1], colors[index * 4 + 2], colors[index * 4 + 3]],
+      getRadius: pointRadius,
+      radiusUnits: 'common',
+      radiusMinPixels: 0.5,
+      radiusMaxPixels: 20,
+      pickable: true,
+      updateTriggers: {
+        getFillColor: colorTrigger,
+        getRadius: [pointRadius]
+      },
+      parameters: { depthTest: false }
+    })].concat(createHighlightLayer());
+  }
+}
+
+function updateLayer() {
+  rebuildColors();
+  if (deckgl) {
+    deckgl.setProps({ layers: createLayers() });
+  }
+  updateSelectionSummary();
+}
+
+// ============================================================================
+// Render Mode Toggle (Points / Polygons)
+// ============================================================================
+function toggleRenderMode() {
+  renderMode = renderMode === 'points' ? 'polygons' : 'points';
+  // build polygon geometry lazily the first time polygons are shown
+  if (renderMode === 'polygons' && hasPolygons && !polygonData) {
+    setLoadingText && setLoadingText('Building polygon geometry...');
+    buildPolygonData();
+  }
+  const toggle = document.getElementById('poly-toggle');
+  toggle.classList.toggle('active', renderMode === 'polygons');
+
+  // Show/hide relevant sliders
+  document.getElementById('point-size-row').style.display = renderMode === 'points' ? 'flex' : 'none';
+  document.getElementById('poly-outline-row').style.display = renderMode === 'polygons' ? 'flex' : 'none';
+
+  updateLayer();
+}
+
+function setPolyOutline(val) {
+  polyOutlineWidth = Number(val);
+  document.getElementById('poly-outline-val').textContent = val;
+  updateLayer();
+}
+
+// ============================================================================
+// Tooltip
+// ============================================================================
+function getTooltipInfo({index, object}) {
+  // For polygon mode, object has .index; for point mode, use index directly
+  let cellIdx;
+  if (renderMode === 'polygons' && object) {
+    cellIdx = object.index;
+  } else {
+    cellIdx = index;
+  }
+  if (cellIdx == null || cellIdx < 0 || !cellData) return null;
+
+  const ct = getCelltype(cellIdx);
+  if (celltypeVisible[ct] === false) return null;
+
+  let html = `<div class="tt-label">Cell ID</div><div class="tt-value">${cellData.cell_id[cellIdx]}</div>`;
+  html += `<div class="tt-label">Cell Type</div><div class="tt-value">${ct}</div>`;
+
+  const ann = getAnnotation(ct);
+  if (ann) {
+    const conf = ann.confidence ? ` <span style="color:#888">(${ann.confidence})</span>` : '';
+    html += `<div class="tt-label">Annotation</div><div class="tt-value">${ann.annotation}${conf}</div>`;
+    if (ann.note) html += `<div class="tt-value" style="color:#e9a145;white-space:normal">⚠ ${ann.note}</div>`;
+  }
+
+  if (currentMode === 'expression' && currentGeneExpr) {
+    const val = currentGeneExpr.dense[cellIdx];
+    const label = currentProtein || currentGene;
+    const formatted = currentProtein ? Math.round(val).toString() : val.toFixed(3);
+    html += `<div class="tt-label">${label}</div><div class="tt-value">${formatted}</div>`;
+  }
+
+  return { html, style: { backgroundColor: 'rgba(22,33,62,0.95)', color: '#e0e0e0', border: '1px solid #0f3460', borderRadius: '6px', padding: '8px 12px', fontSize: '12px' } };
+}
+
+// ============================================================================
+// Cluster annotations
+// Map of label -> {annotation, confidence, note}, written by
+// scripts/8_subcluster_annotation_map.R from the curated per-lineage snRNA
+// annotation sheets. Absent for labels that need no explanation (tissue piece).
+// ============================================================================
+function getAnnotation(ct) {
+  const map = metadata && metadata.label_annotations;
+  if (!map) return null;
+  const a = map[ct];
+  return (a && a.annotation) ? a : null;
+}
+
+function annotationTitle(ct) {
+  const a = getAnnotation(ct);
+  if (!a) return ct;
+  let t = `${ct} — ${a.annotation}`;
+  if (a.confidence) t += ` (reference confidence: ${a.confidence})`;
+  if (a.note) t += `\n\n⚠ ${a.note}`;
+  return t;
+}
+
+// ============================================================================
+// Cell Type UI
+// ============================================================================
+function buildCelltypeUI() {
+  const listEl = document.getElementById('celltype-list');
+  const listExprEl = document.getElementById('celltype-list-expr');
+  listEl.innerHTML = '';
+  listExprEl.innerHTML = '';
+
+  // Count cells per type
+  const counts = {};
+  cellData[currentAnnotation].forEach(ct => { counts[ct] = (counts[ct] || 0) + 1; });
+
+  metadata.cell_types.forEach(ct => {
+    const row = createCelltypeRow(ct, counts[ct] || 0);
+    listEl.appendChild(row);
+    listExprEl.appendChild(row.cloneNode(true));
+  });
+
+  // Re-attach events for cloned nodes in expr list
+  listExprEl.querySelectorAll('.ct-row').forEach(row => {
+    const ct = row.dataset.celltype;
+    row.querySelector('input[type="checkbox"]').addEventListener('change', (e) => {
+      celltypeVisible[ct] = e.target.checked;
+      syncCheckboxes(ct);
+      rebuildHighlightIdx();
+      updateLayer();
+    });
+    row.querySelector('input[type="color"]').addEventListener('input', (e) => {
+      celltypeColors[ct] = hexToRgb(e.target.value);
+      syncColorPickers(ct);
+      saveColorPreferences();
+      updateLayer();
+    });
+    const hlBtn = row.querySelector('.ct-hl');
+    if (hlBtn) hlBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleHighlightLabel(ct); });
+  });
+}
+
+function createCelltypeRow(ct, count) {
+  const row = document.createElement('div');
+  row.className = 'ct-row';
+  row.dataset.celltype = ct;
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = celltypeVisible[ct] !== false;
+  cb.addEventListener('change', () => {
+    celltypeVisible[ct] = cb.checked;
+    syncCheckboxes(ct);
+    rebuildHighlightIdx();   // hidden cells must drop out of the highlight set
+    updateLayer();
+  });
+
+  const hl = document.createElement('button');
+  hl.className = 'ct-hl' + (highlightLabels[ct] ? ' active' : '');
+  hl.textContent = '◎';
+  hl.title = 'Highlight these cells (draws an enlarged ring around each one)';
+  hl.addEventListener('click', (e) => { e.stopPropagation(); toggleHighlightLabel(ct); });
+
+  const cp = document.createElement('input');
+  cp.type = 'color';
+  cp.value = rgbToHex(celltypeColors[ct] || [128, 128, 128]);
+  cp.addEventListener('input', () => {
+    celltypeColors[ct] = hexToRgb(cp.value);
+    syncColorPickers(ct);
+    saveColorPreferences();
+    updateLayer();
+  });
+
+  const label = document.createElement('span');
+  label.className = 'ct-label';
+  const nameEl = document.createElement('div');
+  nameEl.className = 'ct-name';
+  nameEl.textContent = ct;
+  label.appendChild(nameEl);
+
+  // Second line: what the cluster code actually is, biologically.
+  const ann = getAnnotation(ct);
+  if (ann) {
+    const annEl = document.createElement('div');
+    annEl.className = 'ct-annot' + (ann.note ? ' flagged' : '');
+    annEl.textContent = (ann.note ? '⚠ ' : '') + ann.annotation;
+    label.appendChild(annEl);
+  }
+  label.title = annotationTitle(ct);
+  label.addEventListener('click', () => {
+    cb.checked = !cb.checked;
+    celltypeVisible[ct] = cb.checked;
+    syncCheckboxes(ct);
+    rebuildHighlightIdx();
+    updateLayer();
+  });
+
+  const countEl = document.createElement('span');
+  countEl.className = 'ct-count';
+  countEl.textContent = count.toLocaleString();
+
+  row.appendChild(cb);
+  row.appendChild(cp);
+  row.appendChild(hl);
+  row.appendChild(label);
+  row.appendChild(countEl);
+  return row;
+}
+
+function syncCheckboxes(ct) {
+  document.querySelectorAll(`.ct-row[data-celltype="${CSS.escape(ct)}"] input[type="checkbox"]`).forEach(cb => {
+    cb.checked = celltypeVisible[ct] !== false;
+  });
+}
+
+function syncColorPickers(ct) {
+  const hex = rgbToHex(celltypeColors[ct] || [128, 128, 128]);
+  document.querySelectorAll(`.ct-row[data-celltype="${CSS.escape(ct)}"] input[type="color"]`).forEach(cp => {
+    cp.value = hex;
+  });
+}
+
+function toggleAll(state) {
+  metadata.cell_types.forEach(ct => { celltypeVisible[ct] = state; });
+  document.querySelectorAll('.ct-row input[type="checkbox"]').forEach(cb => { cb.checked = state; });
+  rebuildHighlightIdx();
+  updateLayer();
+}
+
+// ============================================================================
+// Mode Switch
+// ============================================================================
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-celltype').classList.toggle('active', mode === 'celltype');
+  document.getElementById('mode-expression').classList.toggle('active', mode === 'expression');
+  document.getElementById('celltype-section').style.display = mode === 'celltype' ? 'block' : 'none';
+  document.getElementById('gene-section').style.display = mode === 'expression' ? 'block' : 'none';
+  updateLayer();
+  updateHash();
+}
+
+// ============================================================================
+// Gene Search
+// ============================================================================
+function buildGeneSearch() {
+  const input = document.getElementById('gene-search');
+  const dropdown = document.getElementById('gene-dropdown');
+  const geneNames = Object.keys(geneList).sort();
+  let highlighted = -1;
+
+  input.addEventListener('input', () => {
+    const query = input.value.toLowerCase().trim();
+    dropdown.innerHTML = '';
+    highlighted = -1;
+
+    if (query.length === 0) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    // Prioritize: starts-with first, then contains
+    const startsWith = geneNames.filter(g => g.toLowerCase().startsWith(query));
+    const contains = geneNames.filter(g => !g.toLowerCase().startsWith(query) && g.toLowerCase().includes(query));
+    const matches = [...startsWith, ...contains].slice(0, 50);
+
+    if (matches.length === 0) {
+      dropdown.style.display = 'none';
+      return;
+    }
+
+    matches.forEach((gene, i) => {
+      const opt = document.createElement('div');
+      opt.className = 'gene-option';
+      opt.textContent = gene;
+      opt.addEventListener('click', () => loadGene(gene));
+      opt.addEventListener('mouseenter', () => {
+        highlighted = i;
+        updateHighlight();
+      });
+      dropdown.appendChild(opt);
+    });
+    dropdown.style.display = 'block';
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const options = dropdown.querySelectorAll('.gene-option');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlighted = Math.min(highlighted + 1, options.length - 1);
+      updateHighlight();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlighted = Math.max(highlighted - 1, 0);
+      updateHighlight();
+    } else if (e.key === 'Enter' && highlighted >= 0) {
+      e.preventDefault();
+      options[highlighted]?.click();
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  function updateHighlight() {
+    dropdown.querySelectorAll('.gene-option').forEach((opt, i) => {
+      opt.classList.toggle('highlighted', i === highlighted);
+      if (i === highlighted) opt.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#gene-search') && !e.target.closest('#gene-dropdown')) {
+      dropdown.style.display = 'none';
+    }
+  });
+}
+
+async function loadGene(geneName) {
+  const filename = geneList[geneName];
+  if (!filename) return;
+
+  // Clear active protein
+  clearProtein(true);
+
+  document.getElementById('gene-search').value = geneName;
+  document.getElementById('gene-dropdown').style.display = 'none';
+
+  // Show loading state
+  document.getElementById('current-gene').innerHTML = `Loading <strong>${geneName}</strong>...`;
+
+  try {
+    const resp = await fetch(`data/genes/${filename}`);
+    const sparse = await resp.json();
+
+    // Expand sparse to dense
+    const N = sparse.n;
+    const dense = new Float32Array(N);
+    let maxVal = 0;
+    for (let j = 0; j < sparse.idx.length; j++) {
+      dense[sparse.idx[j]] = sparse.val[j];
+      if (sparse.val[j] > maxVal) maxVal = sparse.val[j];
+    }
+
+    // Use 99th percentile for color scale to avoid outlier compression
+    const nonzero = sparse.val.slice().sort((a, b) => a - b);
+    const p99idx = Math.floor(nonzero.length * 0.99);
+    const p99 = nonzero[p99idx] || maxVal;
+
+    currentGene = geneName;
+    currentGeneExpr = { dense, maxVal: p99 };
+
+    // Update UI
+    document.getElementById('current-gene').innerHTML =
+      `Showing: <strong>${geneName}</strong> <button id="clear-gene-btn" onclick="clearGene()">Clear</button>`;
+    document.getElementById('expression-legend').style.display = 'block';
+    document.getElementById('legend-min').textContent = '0';
+    document.getElementById('legend-max').textContent = p99.toFixed(2);
+    updateLegendGradient();
+
+    updateLayer();
+    updateHash();
+  } catch (err) {
+    document.getElementById('current-gene').innerHTML = `<span style="color:#e94560">Error loading ${geneName}</span>`;
+  }
+}
+
+function clearGene() {
+  currentGene = null;
+  currentGeneExpr = null;
+  currentProtein = null;
+  document.getElementById('gene-search').value = '';
+  document.getElementById('current-gene').innerHTML = '';
+  document.getElementById('expression-legend').style.display = 'none';
+  // Deactivate protein buttons
+  document.querySelectorAll('.protein-btn.active').forEach(b => b.classList.remove('active'));
+  updateLayer();
+  updateHash();
+}
+
+// ============================================================================
+// Protein Markers
+// ============================================================================
+function buildProteinButtons() {
+  if (!proteinList || Object.keys(proteinList).length === 0) return;
+
+  const section = document.getElementById('protein-section');
+  const container = document.getElementById('protein-buttons');
+  section.style.display = 'block';
+
+  // Group by marker base name (e.g., "CD3" from "Mean.CD3")
+  const names = Object.keys(proteinList).sort();
+  const grid = document.createElement('div');
+  grid.className = 'protein-grid';
+
+  names.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'protein-btn';
+    // Show shortened label: "Mean.CD3" → "CD3"
+    btn.textContent = name.replace(/^Mean\./, '');
+    btn.title = name;
+    btn.dataset.protein = name;
+    btn.addEventListener('click', () => loadProtein(name));
+    grid.appendChild(btn);
+  });
+
+  container.appendChild(grid);
+}
+
+async function loadProtein(name) {
+  const filename = proteinList[name];
+  if (!filename) return;
+
+  // Show loading
+  document.getElementById('current-gene').innerHTML = `Loading <strong>${name}</strong>...`;
+
+  try {
+    const resp = await fetch(`data/proteins/${filename}`);
+    const sparse = await resp.json();
+
+    // Expand sparse to dense
+    const N = sparse.n;
+    const dense = new Float32Array(N);
+    let maxVal = 0;
+    for (let j = 0; j < sparse.idx.length; j++) {
+      dense[sparse.idx[j]] = sparse.val[j];
+      if (sparse.val[j] > maxVal) maxVal = sparse.val[j];
+    }
+
+    // Use 99th percentile for color scale
+    const nonzero = sparse.val.slice().sort((a, b) => a - b);
+    const p99idx = Math.floor(nonzero.length * 0.99);
+    const p99 = nonzero[p99idx] || maxVal;
+
+    // Reuse expression rendering pipeline
+    currentGene = name;
+    currentGeneExpr = { dense, maxVal: p99 };
+    currentProtein = name;
+
+    // Update UI
+    document.getElementById('gene-search').value = '';
+    document.getElementById('current-gene').innerHTML =
+      `Showing: <strong>${name}</strong> <button id="clear-gene-btn" onclick="clearGene()">Clear</button>`;
+    document.getElementById('expression-legend').style.display = 'block';
+    document.getElementById('legend-min').textContent = '0';
+    document.getElementById('legend-max').textContent = Math.round(p99).toString();
+    updateLegendGradient();
+
+    // Highlight active button
+    document.querySelectorAll('.protein-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.protein === name);
+    });
+
+    updateLayer();
+    updateHash();
+  } catch (err) {
+    document.getElementById('current-gene').innerHTML = `<span style="color:#e94560">Error loading ${name}</span>`;
+  }
+}
+
+function clearProtein(skipUpdate) {
+  currentProtein = null;
+  document.querySelectorAll('.protein-btn.active').forEach(b => b.classList.remove('active'));
+  if (!skipUpdate) {
+    clearGene();
+  }
+}
+
+// ============================================================================
+// Colormap Selection
+// ============================================================================
+function loadColormapPreference() {
+  const saved = localStorage.getItem('spatial_viewer_colormap');
+  if (saved && COLORMAPS[saved]) {
+    currentColormap = saved;
+    document.getElementById('colormap-select').value = saved;
+  }
+
+  document.getElementById('colormap-select').addEventListener('change', (e) => {
+    currentColormap = e.target.value;
+    localStorage.setItem('spatial_viewer_colormap', currentColormap);
+    updateLegendGradient();
+    if (currentGeneExpr) updateLayer();
+  });
+}
+
+function updateLegendGradient() {
+  const stops = COLORMAPS[currentColormap] || COLORMAPS.viridis;
+  const cssStops = stops.map(rgb => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`).join(', ');
+  document.getElementById('legend-gradient').style.background = `linear-gradient(to right, ${cssStops})`;
+}
+
+// ============================================================================
+// Point Size
+// ============================================================================
+function setPointSize(val) {
+  pointRadius = Number(val);
+  document.getElementById('point-size-val').textContent = val;
+  updateLayer();
+}
+
+// ============================================================================
+// Reset View
+// ============================================================================
+function resetView() {
+  if (!deckgl || !metadata) return;
+  const bounds = metadata.bounds;
+  const cx = (bounds.x_min + bounds.x_max) / 2;
+  const cy = (bounds.y_min + bounds.y_max) / 2;
+  const container = document.getElementById('deck-canvas');
+  const rangeX = bounds.x_max - bounds.x_min;
+  const rangeY = bounds.y_max - bounds.y_min;
+  const zoom = Math.log2(Math.min(container.clientWidth / rangeX, container.clientHeight / rangeY)) - 0.5;
+
+  deckgl.setProps({
+    initialViewState: {
+      target: [cx, cy, 0],
+      zoom: zoom,
+      minZoom: -10,
+      maxZoom: 10,
+      transitionDuration: 500
+    }
+  });
+}
+
+// ============================================================================
+// Screenshot
+// ============================================================================
+function takeScreenshot() {
+  if (!deckgl) return;
+  captureScreenshot = true;
+  deckgl.redraw(true);
+}
+
+function saveCanvasWithBackground(srcCanvas) {
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = w; tmpCanvas.height = h;
+  const ctx = tmpCanvas.getContext('2d');
+  // Draw background color first
+  ctx.fillStyle = `rgb(${bgColor[0]},${bgColor[1]},${bgColor[2]})`;
+  ctx.fillRect(0, 0, w, h);
+  // Draw deck.gl canvas on top
+  ctx.drawImage(srcCanvas, 0, 0);
+  const link = document.createElement('a');
+  link.download = `${metadata.dataset_name.replace(/\s+/g, '_')}_screenshot.png`;
+  link.href = tmpCanvas.toDataURL('image/png');
+  link.click();
+}
+
+// ============================================================================
+// URL Hash for sharing views
+// ============================================================================
+function updateHash(viewState) {
+  const params = new URLSearchParams();
+  if (viewState) {
+    params.set('x', Math.round(viewState.target[0]));
+    params.set('y', Math.round(viewState.target[1]));
+    params.set('z', viewState.zoom.toFixed(2));
+  }
+  if (currentMode !== 'celltype') params.set('mode', currentMode);
+  if (currentProtein) {
+    params.set('protein', currentProtein);
+  } else if (currentGene) {
+    params.set('gene', currentGene);
+  }
+  if (renderMode !== 'points') params.set('render', renderMode);
+  // Annotation layer and label highlights, so a highlighted view is shareable.
+  // Pasted cell-ID sets are deliberately NOT serialised — they can run to
+  // thousands of IDs and would blow the URL length.
+  if (currentAnnotation !== 'celltype') params.set('ann', currentAnnotation);
+  const hlKeys = Object.keys(highlightLabels);
+  if (hlKeys.length) {
+    params.set('hl', hlKeys.join('~'));
+    params.set('hls', String(highlightScale));
+  }
+  const hash = params.toString();
+  if (hash) history.replaceState(null, '', '#' + hash);
+}
+
+function restoreFromHash() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+
+  if (params.get('render') === 'polygons' && hasPolygons) {
+    toggleRenderMode();
+  }
+  // Annotation layer must be restored BEFORE the highlight labels, because
+  // switchAnnotation() clears highlightLabels by design.
+  if (params.has('ann') && metadata.annotations && metadata.annotations[params.get('ann')]) {
+    const sel = document.getElementById('annotation-select');
+    if (sel) sel.value = params.get('ann');
+    switchAnnotation(params.get('ann'));
+  }
+  if (params.has('hls')) {
+    highlightScale = Number(params.get('hls')) || 3;
+    const s = document.getElementById('highlight-scale-slider');
+    if (s) { s.value = highlightScale; }
+    const v = document.getElementById('highlight-scale-val');
+    if (v) v.textContent = highlightScale;
+  }
+  if (params.has('hl')) {
+    highlightLabels = {};
+    params.get('hl').split('~').filter(Boolean).forEach(ct => { highlightLabels[ct] = true; });
+    Object.keys(highlightLabels).forEach(syncHighlightButtons);
+    rebuildHighlightIdx();
+    updateLayer();
+  }
+  if (params.has('mode')) setMode(params.get('mode'));
+  if (params.has('protein') && proteinList && proteinList[params.get('protein')]) {
+    setMode('expression');
+    loadProtein(params.get('protein'));
+  } else if (params.has('gene')) {
+    setMode('expression');
+    loadGene(params.get('gene'));
+  }
+
+  if (params.has('x') && params.has('y') && params.has('z')) {
+    const target = [Number(params.get('x')), Number(params.get('y')), 0];
+    const zoom = Number(params.get('z'));
+    deckgl.setProps({
+      initialViewState: { target, zoom, minZoom: -10, maxZoom: 10 }
+    });
+  }
+}
+
+// ============================================================================
+// Color Utilities
+// ============================================================================
+function rgbToHex(rgb) {
+  return '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return [r, g, b];
+}
+
+// ============================================================================
+// Background Color
+// ============================================================================
+let bgColor = [26, 26, 46]; // default #1a1a2e
+
+function setBgColor(hex) {
+  bgColor = hexToRgb(hex);
+  document.getElementById('bg-color-label').textContent = hex;
+  document.getElementById('deck-container').style.background = hex;
+  document.body.style.background = hex;
+  localStorage.setItem('spatial_viewer_bg', hex);
+}
+
+function loadBgColor() {
+  const saved = localStorage.getItem('spatial_viewer_bg');
+  if (saved) {
+    document.getElementById('bg-color-picker').value = saved;
+    setBgColor(saved);
+  }
+}
+
+// ============================================================================
+// Selection Summary
+// ============================================================================
+function updateSelectionSummary() {
+  const el = document.getElementById('selection-summary');
+  if (!metadata || !cellData) { el.innerHTML = ''; return; }
+
+  const selectedTypes = metadata.cell_types.filter(ct => celltypeVisible[ct] !== false);
+  const totalTypes = metadata.cell_types.length;
+
+  // Count visible cells
+  let visibleCells = 0;
+  const N = cellData[currentAnnotation].length;
+  for (let i = 0; i < N; i++) {
+    if (celltypeVisible[getCelltype(i)] !== false) visibleCells++;
+  }
+
+  const typeChips = selectedTypes.map(ct => {
+    const hex = rgbToHex(celltypeColors[ct] || [128,128,128]);
+    return `<span class="summary-chip"><span class="chip-dot" style="background:${hex}"></span>${ct}</span>`;
+  }).join('');
+
+  const nHl = highlightIdx ? highlightIdx.length : 0;
+  const hlTxt = nHl ? ` · <span class="summary-count" style="color:#ffd54f">${nHl.toLocaleString()}</span> highlighted` : '';
+
+  el.innerHTML = `<span class="summary-count">${selectedTypes.length}/${totalTypes}</span> types · ` +
+    `<span class="summary-count">${visibleCells.toLocaleString()}</span>/${metadata.n_cells.toLocaleString()} cells` + hlTxt +
+    `<div class="summary-types">${typeChips}</div>`;
+}
+
+// ============================================================================
+// Start
+// ============================================================================
+init().catch(err => {
+  document.getElementById('loading-text').textContent = 'Error: ' + err.message;
+  console.error(err);
+});
+</script>
+</body>
+</html>

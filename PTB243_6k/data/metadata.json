@@ -1,0 +1,338 @@
+{
+  "dataset_name": "PTB243_6k CosMx 6K",
+  "n_cells": 463405,
+  "n_celltypes": 10,
+  "cell_types": [
+    "B cell",
+    "Endothelial",
+    "Epithelial",
+    "Fibroblast",
+    "Mast",
+    "Myeloid",
+    "QC_removed",
+    "SMC/Pericyte",
+    "T cell",
+    "unassigned"
+  ],
+  "n_genes": 80,
+  "has_polygons": true,
+  "has_proteins": true,
+  "n_proteins": 10,
+  "bounds": {
+    "x_min": 35.4764,
+    "x_max": 97966.0939,
+    "y_min": -4245.1548,
+    "y_max": 109881.9131
+  },
+  "celltype_col": "celltype",
+  "annotations": {
+    "celltype": {
+      "label": "Primary",
+      "cell_types": [
+        "B cell",
+        "Endothelial",
+        "Epithelial",
+        "Fibroblast",
+        "Mast",
+        "Myeloid",
+        "QC_removed",
+        "SMC/Pericyte",
+        "T cell",
+        "unassigned"
+      ],
+      "n_celltypes": 10
+    },
+    "major_celltype": {
+      "label": "Major Cell Type",
+      "cell_types": [
+        "B cell",
+        "Endothelial",
+        "Epithelial",
+        "Fibroblast",
+        "Mast",
+        "Myeloid",
+        "QC_removed",
+        "SMC/Pericyte",
+        "T cell",
+        "unassigned"
+      ],
+      "n_celltypes": 10
+    },
+    "subcluster": {
+      "label": "Subcluster",
+      "cell_types": [
+        "Adventitial fibroblast",
+        "Alveolar fibroblast",
+        "Alveolar macrophage",
+        "antigen activated Th1*",
+        "AP-1 high recently activated T cells",
+        "Arterial EC",
+        "AT1",
+        "AT2",
+        "B cell",
+        "B cell (FDC niche)",
+        "B cell (low confidence)",
+        "Basal airway",
+        "Basaloid (KRT17+)",
+        "Capillary EC",
+        "cDC1",
+        "cDC2",
+        "Ciliated airway",
+        "Classical monocyte",
+        "Club/secretory airway",
+        "Endothelial (low confidence)",
+        "Epithelial (low confidence)",
+        "Fibroblast (low confidence)",
+        "GZMB+ CD8 T cells",
+        "GZMK+ CD8+ T cells",
+        "Hobit+ CD8+ T cells",
+        "Hypoxic/glycolytic macrophage (SPP1+)",
+        "IFN-activated macrophage (CXCL9/10/11)",
+        "Inflammatory/early-response macrophage (NR4A)",
+        "Interstitial/perivascular macrophage",
+        "Lipid-associated/iron-handling macrophage",
+        "Lymphatic EC",
+        "Lymphoid-stroma fibroblast (CXCL13+)",
+        "Mast cell",
+        "Metallothionein/matrix-remodeling macrophage",
+        "Monocyte/macrophage (low-distinct)",
+        "mregDC / mature migratory DC",
+        "Myeloid (low confidence)",
+        "Myofibroblast",
+        "Naive/central-memory T cells",
+        "Neuroendocrine",
+        "Neutrophil/granulocyte",
+        "NK/gamma-delta T cells",
+        "pDC",
+        "Plasma cell",
+        "QC_removed",
+        "SLC4A10+ MAIT/Th17-like T cells",
+        "SMC/Pericyte",
+        "T cell (low confidence)",
+        "T-CTL/NK/GD",
+        "Th1* cells",
+        "Th1* T cells (IFNG+, IL26+)",
+        "Tregs",
+        "unassigned",
+        "Venous EC"
+      ],
+      "n_celltypes": 54
+    },
+    "piece": {
+      "label": "Tissue piece",
+      "cell_types": [
+        "A (small piece)",
+        "B (large piece)"
+      ],
+      "n_celltypes": 2
+    }
+  },
+  "label_annotations": {
+    "Myofibroblast": {
+      "annotation": "Myofibroblast",
+      "note": "[FB8] Not supported in situ: top DEGs on this slide are T cell genes (CD6, TRBC2, CD3E, IL7R, GZMA), not cycling transcripts. Like PR0 it appears to absorb T cells — do not read as proliferating fibroblasts."
+    },
+    "AT2": {
+      "annotation": "AT2",
+      "note": "[EP3] Weak in situ: top DEGs (TRPC6, CBLN2, ZIC2, CHRM3) carry no AT2 programme. AT2 is better represented by EP0/EP8 (HHIP, LAMP3, HP). [EP6] Only 9 cells on this slide — no usable in situ DEGs."
+    },
+    "Lipid-associated/iron-handling macrophage": {
+      "annotation": "Lipid-associated/iron-handling macrophage"
+    },
+    "Neuroendocrine": {
+      "annotation": "Neuroendocrine",
+      "note": "[EP11] Not supported in situ: 16k cells is far too many for PNEC and the top DEGs (HBB, CASR, DNMT3L, TCL1B) carry no neuroendocrine programme. Ciliated cells are EP10 (FOXJ1+). Treat EP11 as unresolved."
+    },
+    "Metallothionein/matrix-remodeling macrophage": {
+      "annotation": "Metallothionein/matrix-remodeling macrophage"
+    },
+    "Plasma cell": {
+      "annotation": "Plasma cell"
+    },
+    "Venous EC": {
+      "annotation": "Venous EC"
+    },
+    "Adventitial fibroblast": {
+      "annotation": "Adventitial fibroblast"
+    },
+    "Naive/central-memory T cells": {
+      "annotation": "Naive/central-memory T cells",
+      "confidence": "High"
+    },
+    "B cell (FDC niche)": {
+      "annotation": "B cell (FDC niche)"
+    },
+    "Capillary EC": {
+      "annotation": "Capillary EC"
+    },
+    "SMC/Pericyte": {
+      "annotation": "Smooth muscle / pericyte"
+    },
+    "Basaloid (KRT17+)": {
+      "annotation": "Basaloid (KRT17+)"
+    },
+    "Monocyte/macrophage (low-distinct)": {
+      "annotation": "Monocyte/macrophage (low-distinct)",
+      "note": "[ML4] Low-distinct in the reference (few specific markers, ambient Ig) — interpret with care."
+    },
+    "Alveolar fibroblast": {
+      "annotation": "Alveolar fibroblast"
+    },
+    "T cell (low confidence)": {
+      "annotation": "T cell, subcluster call below the confidence cutoff"
+    },
+    "Th1* cells": {
+      "annotation": "Th1* cells",
+      "confidence": "High"
+    },
+    "Hypoxic/glycolytic macrophage (SPP1+)": {
+      "annotation": "Hypoxic/glycolytic macrophage (SPP1+)"
+    },
+    "Myeloid (low confidence)": {
+      "annotation": "Myeloid, subcluster call below the confidence cutoff"
+    },
+    "Alveolar macrophage": {
+      "annotation": "Alveolar macrophage"
+    },
+    "GZMK+ CD8+ T cells": {
+      "annotation": "GZMK+ CD8+ T cells",
+      "confidence": "High"
+    },
+    "Inflammatory/early-response macrophage (NR4A)": {
+      "annotation": "Inflammatory/early-response macrophage (NR4A)"
+    },
+    "Interstitial/perivascular macrophage": {
+      "annotation": "Interstitial/perivascular macrophage"
+    },
+    "AT1": {
+      "annotation": "AT1"
+    },
+    "Fibroblast (low confidence)": {
+      "annotation": "Fibroblast, subcluster call below the confidence cutoff"
+    },
+    "B cell": {
+      "annotation": "B cell"
+    },
+    "Ciliated airway": {
+      "annotation": "Ciliated airway"
+    },
+    "cDC1": {
+      "annotation": "cDC1"
+    },
+    "Epithelial (low confidence)": {
+      "annotation": "Epithelial, subcluster call below the confidence cutoff"
+    },
+    "cDC2": {
+      "annotation": "cDC2"
+    },
+    "Mast cell": {
+      "annotation": "Mast cell"
+    },
+    "Neutrophil/granulocyte": {
+      "annotation": "Neutrophil/granulocyte"
+    },
+    "mregDC / mature migratory DC": {
+      "annotation": "mregDC / mature migratory DC"
+    },
+    "Classical monocyte": {
+      "annotation": "Classical monocyte"
+    },
+    "Tregs": {
+      "annotation": "Tregs",
+      "confidence": "High"
+    },
+    "Arterial EC": {
+      "annotation": "Arterial EC"
+    },
+    "Lymphatic EC": {
+      "annotation": "Lymphatic EC"
+    },
+    "NK/gamma-delta T cells": {
+      "annotation": "NK/gamma-delta T cells",
+      "confidence": "High"
+    },
+    "unassigned": {
+      "annotation": "No confident reference label"
+    },
+    "IFN-activated macrophage (CXCL9/10/11)": {
+      "annotation": "IFN-activated macrophage (CXCL9/10/11)",
+      "note": "[ML13] IFN programme validates in situ, but the ML0/ML13 boundary is soft (mean confidence 0.502); treat the ML13 count as approximate."
+    },
+    "Lymphoid-stroma fibroblast (CXCL13+)": {
+      "annotation": "Lymphoid-stroma fibroblast (CXCL13+)"
+    },
+    "Hobit+ CD8+ T cells": {
+      "annotation": "Hobit+ CD8+ T cells",
+      "confidence": "High"
+    },
+    "Club/secretory airway": {
+      "annotation": "Club/secretory airway"
+    },
+    "Basal airway": {
+      "annotation": "Basal airway"
+    },
+    "pDC": {
+      "annotation": "pDC"
+    },
+    "B cell (low confidence)": {
+      "annotation": "B cell, subcluster call below the confidence cutoff"
+    },
+    "T-CTL/NK/GD": {
+      "annotation": "T-CTL/NK/GD",
+      "confidence": "High"
+    },
+    "antigen activated Th1*": {
+      "annotation": "antigen activated Th1*",
+      "confidence": "High"
+    },
+    "Endothelial (low confidence)": {
+      "annotation": ""
+    },
+    "SLC4A10+ MAIT/Th17-like T cells": {
+      "annotation": "SLC4A10+ MAIT/Th17-like T cells",
+      "confidence": "High",
+      "note": "[TC7] Weak in situ: no MAIT programme among the top DEGs; only 146 cells."
+    },
+    "AP-1 high recently activated T cells": {
+      "annotation": "AP-1 high recently activated T cells",
+      "confidence": "Medium"
+    },
+    "Th1* T cells (IFNG+, IL26+)": {
+      "annotation": "Th1* T cells (IFNG+, IL26+)",
+      "confidence": "High"
+    },
+    "GZMB+ CD8 T cells": {
+      "annotation": "GZMB+ CD8 T cells",
+      "confidence": "High"
+    },
+    "QC_removed": {
+      "annotation": "Cell removed by QC (< 100 counts, or > 2% negative-probe fraction) — not annotated"
+    },
+    "Early activation T cell": {
+      "annotation": "T cell scoring above the cutoff on the 7-gene immediate-early module (EGR1, EGR2, NR4A1, NR4A2, NR4A3, IER3, KDM6B). Module-score call, NOT label transfer — the transferred subcluster for these cells is still shown in the Subcluster layer. EGR3, NFKBID and VDR were requested but are not on the CosMx 6K panel.",
+      "note": "[Early activation T cell] Module-score call; run 9_early_activation_tcells.R for the cutoff provenance."
+    },
+    "Endothelial": {
+      "annotation": "Endothelium (PECAM1, VWF, CLDN5, ACKR1)"
+    },
+    "Epithelial": {
+      "annotation": "Airway + alveolar epithelium (EPCAM, KRT8/18/19, SFTPC, SCGB1A1)"
+    },
+    "Fibroblast": {
+      "annotation": "Fibroblast / mesenchyme (COL1A1, COL3A1, DCN, LUM, PDGFRA)"
+    },
+    "Mast": {
+      "annotation": "Mast cell (CPA3, TPSAB1/2, MS4A2, KIT, HDC)"
+    },
+    "Myeloid": {
+      "annotation": "Macrophage / monocyte / DC / neutrophil (CD68, C1QA, LYZ, AIF1)"
+    },
+    "Proliferating": {
+      "annotation": "Cycling cells (MKI67, TOP2A, UBE2C) — see note",
+      "note": "[Proliferating] Failed marker validation in situ: only 27.7% of these cells detect any cycling transcript and 43.9% are CD3+, so the label absorbs T cells rather than marking cycling ones. Do not read it as a proliferation measure."
+    },
+    "T cell": {
+      "annotation": "T / NK lineage (CD3D, CD3E, CD8A, IL7R, NKG7)"
+    }
+  }
+}
