@@ -532,23 +532,31 @@ let currentProtein = null; // name of active protein or null
 // ============================================================================
 // Initialization
 // ============================================================================
+// The manifests are small and change whenever the analysis is re-exported, but
+// GitHub Pages caches them for 600 s -- long enough that a new annotation layer
+// looks "missing" to anyone who visited recently. 'no-cache' still uses the
+// cached bytes when the ETag matches, so this costs one conditional request,
+// not a re-download. The big payloads (cells.json, *.bin) stay fully cached.
+const NO_CACHE = { cache: 'no-cache' };
+
 async function init() {
   setLoadingText('Loading cell positions...');
   const cellsResp = await fetch('data/cells.json');
   cellData = await cellsResp.json();
 
   setLoadingText('Loading metadata...');
-  const metaResp = await fetch('data/metadata.json');
+  const metaResp = await fetch('data/metadata.json', NO_CACHE);
   metadata = await metaResp.json();
 
   setLoadingText('Loading gene list...');
-  const geneResp = await fetch('data/gene_list.json');
+  const geneResp = await fetch('data/gene_list.json', NO_CACHE);
   geneList = await geneResp.json();
 
   // Update UI header
   document.getElementById('dataset-name').textContent = metadata.dataset_name;
+  const nLayers = metadata.annotations ? Object.keys(metadata.annotations).length : 1;
   document.getElementById('dataset-stats').textContent =
-    `${metadata.n_cells.toLocaleString()} cells · ${metadata.n_celltypes} types · ${metadata.n_genes} genes`;
+    `${metadata.n_cells.toLocaleString()} cells · ${metadata.n_celltypes} types · ${metadata.n_genes} genes · ${nLayers} layers`;
 
   // Initialize colors and visibility from localStorage or defaults
   loadColorPreferences();
@@ -583,7 +591,7 @@ async function init() {
 
   // Load protein list (optional — backward compatible)
   try {
-    const protResp = await fetch('data/protein_list.json');
+    const protResp = await fetch('data/protein_list.json', NO_CACHE);
     if (protResp.ok) {
       proteinList = await protResp.json();
     }
@@ -591,7 +599,7 @@ async function init() {
 
   // Load transcript manifest (optional — backward compatible with older exports)
   try {
-    const txResp = await fetch('data/transcript_list.json');
+    const txResp = await fetch('data/transcript_list.json', NO_CACHE);
     if (txResp.ok) {
       transcriptList = await txResp.json();
     }
