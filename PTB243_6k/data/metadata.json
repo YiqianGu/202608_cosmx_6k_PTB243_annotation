@@ -213,6 +213,23 @@
         "QC_removed"
       ],
       "n_celltypes": 6
+    },
+    "major_with_EAT": {
+      "label": "Major + early activation T",
+      "cell_types": [
+        "B cell",
+        "early_activation_T",
+        "Endothelial",
+        "Epithelial",
+        "Fibroblast",
+        "Mast",
+        "Myeloid",
+        "QC_removed",
+        "SMC/Pericyte",
+        "T cell",
+        "unassigned"
+      ],
+      "n_celltypes": 11
     }
   },
   "label_annotations": {
