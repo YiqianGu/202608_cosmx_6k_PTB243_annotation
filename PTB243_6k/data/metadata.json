@@ -417,6 +417,10 @@
       "annotation": "T cell scoring above the cutoff on the 7-gene immediate-early module (EGR1, EGR2, NR4A1, NR4A2, NR4A3, IER3, KDM6B). Module-score call, NOT label transfer — the transferred subcluster for these cells is still shown in the Subcluster layer. EGR3, NFKBID and VDR were requested but are not on the CosMx 6K panel.",
       "note": "[Early activation T cell] Module-score call; run 9_early_activation_tcells.R for the cutoff provenance."
     },
+    "early_activation_T": {
+      "annotation": "Cells in the top 20% of ALL FOUR of: T lineage, early activation and cytokine module scores, plus Mean.CD3 protein (202608_top20_T_cell.R). An intersection of four thresholds, not a transferred or curated call.",
+      "note": "[early_activation_T] Only 474 of these 1,429 cells are T cells: the rest are Fibroblast (585), Myeloid (212), Endothelial (55), Epithelial (43), B cell (32) and 28 others. The name says T, the plurality is not. Against the transferred early-activation call (TC9/TC10) the set is 13-fold enriched over chance but only 1.7% precise and 4.3% sensitive. Treat as a lead, not a cell type."
+    },
     "Endothelial": {
       "annotation": "Endothelium (PECAM1, VWF, CLDN5, ACKR1)"
     },
