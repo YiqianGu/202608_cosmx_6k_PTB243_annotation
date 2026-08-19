@@ -230,6 +230,67 @@
         "unassigned"
       ],
       "n_celltypes": 11
+    },
+    "subcluster_with_EAT": {
+      "label": "Subcluster + early activation T",
+      "cell_types": [
+        "Adventitial fibroblast",
+        "Alveolar fibroblast",
+        "Alveolar macrophage",
+        "antigen activated Th1*",
+        "AP-1 high recently activated T cells",
+        "Arterial EC",
+        "AT1",
+        "AT2",
+        "B cell",
+        "B cell (FDC niche)",
+        "B cell (low confidence)",
+        "Basal airway",
+        "Basaloid (KRT17+)",
+        "Capillary EC",
+        "cDC1",
+        "cDC2",
+        "Ciliated airway",
+        "Classical monocyte",
+        "Club/secretory airway",
+        "early_activation_T",
+        "Endothelial (low confidence)",
+        "Epithelial (low confidence)",
+        "Fibroblast (low confidence)",
+        "GZMB+ CD8 T cells",
+        "GZMK+ CD8+ T cells",
+        "Hobit+ CD8+ T cells",
+        "Hypoxic/glycolytic macrophage (SPP1+)",
+        "IFN-activated macrophage (CXCL9/10/11)",
+        "Inflammatory/early-response macrophage (NR4A)",
+        "Interstitial/perivascular macrophage",
+        "Lipid-associated/iron-handling macrophage",
+        "Lymphatic EC",
+        "Lymphoid-stroma fibroblast (CXCL13+)",
+        "Mast cell",
+        "Metallothionein/matrix-remodeling macrophage",
+        "Monocyte/macrophage (low-distinct)",
+        "mregDC / mature migratory DC",
+        "Myeloid (low confidence)",
+        "Myofibroblast",
+        "Naive/central-memory T cells",
+        "Neuroendocrine",
+        "Neutrophil/granulocyte",
+        "NK/gamma-delta T cells",
+        "pDC",
+        "Plasma cell",
+        "QC_removed",
+        "SLC4A10+ MAIT/Th17-like T cells",
+        "SMC/Pericyte",
+        "T cell (low confidence)",
+        "T-CTL/NK/GD",
+        "Th1* cells",
+        "Th1* T cells (IFNG+, IL26+)",
+        "Tregs",
+        "unassigned",
+        "Venous EC"
+      ],
+      "n_celltypes": 55
     }
   },
   "label_annotations": {
@@ -419,7 +480,7 @@
     },
     "early_activation_T": {
       "annotation": "Cells in the top 20% of ALL FOUR of: T lineage, early activation and cytokine module scores, plus Mean.CD3 protein (202608_top20_T_cell.R). An intersection of four thresholds, not a transferred or curated call.",
-      "note": "[early_activation_T] Only 474 of these 1,429 cells are T cells: the rest are Fibroblast (585), Myeloid (212), Endothelial (55), Epithelial (43), B cell (32) and 28 others. The name says T, the plurality is not. Against the transferred early-activation call (TC9/TC10) the set is 13-fold enriched over chance but only 1.7% precise and 4.3% sensitive. Treat as a lead, not a cell type."
+      "note": "[early_activation_T] By transferred major label only 474 of these 1,429 cells are T cells, but 542 more are FB8/Myofibroblast, the subcluster this pipeline already flags as absorbing T cells (its top in-situ DEGs are CD6, TRBC2, CD3E, IL7R, GZMA). So ~71% is T cell or T-cell-like, and Myofibroblast is 3-fold enriched here (0.9% vs a 0.3% base rate). The remaining 413 are Myeloid (212), Endothelial (55), Epithelial (43), B cell (32) and 71 others. Against the transferred early-activation call (TC9/TC10) the set is 13-fold enriched over chance but 1.7% precise and 4.3% sensitive, so it is a lead worth following, not a finished cell type."
     },
     "Endothelial": {
       "annotation": "Endothelium (PECAM1, VWF, CLDN5, ACKR1)"
