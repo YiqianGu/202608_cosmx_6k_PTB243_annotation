@@ -232,7 +232,7 @@
       "n_celltypes": 11
     },
     "subcluster_with_EAT": {
-      "label": "Subcluster + early activation T",
+      "label": "Subcluster + module calls",
       "cell_types": [
         "Adventitial fibroblast",
         "Alveolar fibroblast",
@@ -284,13 +284,14 @@
         "SMC/Pericyte",
         "T cell (low confidence)",
         "T-CTL/NK/GD",
+        "Th1 by module",
         "Th1* cells",
         "Th1* T cells (IFNG+, IL26+)",
         "Tregs",
         "unassigned",
         "Venous EC"
       ],
-      "n_celltypes": 55
+      "n_celltypes": 56
     }
   },
   "label_annotations": {
@@ -481,6 +482,10 @@
     "early_activation_T": {
       "annotation": "Cells in the top 20% of ALL FOUR of: T lineage, early activation and cytokine module scores, plus Mean.CD3 protein (202608_top20_T_cell.R). An intersection of four thresholds, not a transferred or curated call.",
       "note": "[early_activation_T] By transferred major label only 474 of these 1,429 cells are T cells, but 542 more are FB8/Myofibroblast, the subcluster this pipeline already flags as absorbing T cells (its top in-situ DEGs are CD6, TRBC2, CD3E, IL7R, GZMA). So ~71% is T cell or T-cell-like, and Myofibroblast is 3-fold enriched here (0.9% vs a 0.3% base rate). The remaining 413 are Myeloid (212), Endothelial (55), Epithelial (43), B cell (32) and 71 others. Against the transferred early-activation call (TC9/TC10) the set is 13-fold enriched over chance but 1.7% precise and 4.3% sensitive, so it is a lead worth following, not a finished cell type."
+    },
+    "Th1 by module": {
+      "annotation": "Cells in the top 20% of the T lineage and cytokine module scores AND of Mean.CD3 protein (202608_top20_T_cell.R). A three-threshold intersection, not a transferred or curated Th1 call.",
+      "note": "[Th1 by module] Only 1,051 of these 8,722 cells (12%) are TC0 Th1* by label; the largest single source is FB8/Myofibroblast (1,944, 22%). Th1* IS the most enriched subtype at 6.5-fold, followed by Tregs 5.2 and GZMK+ CD8 4.0, and both professional APC types are enriched (mregDC 4.0, cDC1 3.3). But ML0 matrix-remodeling macrophages are DEPLETED at 0.4-fold. Note also that given T lineage, CD3 and the cytokine module are near-independent (1.04-fold), so the cytokine criterion adds little. Read as T-lineage-rich, not as a Th1 population."
     },
     "Endothelial": {
       "annotation": "Endothelium (PECAM1, VWF, CLDN5, ACKR1)"
