@@ -39,6 +39,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; cursor: pointer; font-size: 13px;
 }
 .ct-row:hover { background: rgba(255,255,255,0.05); }
+/* Individual transcript rows — same metrics as .ct-row, tighter and monospaced */
+.tx-group {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: #7a8ba8; margin: 8px 0 2px 2px;
+}
+.tx-row {
+  display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 4px;
+  cursor: pointer; font-size: 12.5px;
+}
+.tx-row:hover { background: rgba(255,255,255,0.05); }
+.tx-row.loading { opacity: 0.5; }
+.tx-row input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
+.tx-row input[type="color"] {
+  width: 18px; height: 18px; padding: 0; border: none; border-radius: 3px;
+  background: none; cursor: pointer; flex-shrink: 0;
+}
+.tx-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 1px; }
+.tx-row input[type="color"]::-webkit-color-swatch { border: 1px solid #555; border-radius: 2px; }
+.tx-label { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.tx-count { color: #7a8ba8; font-size: 10.5px; flex-shrink: 0; }
 .ct-row input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
 .ct-row input[type="color"] {
   width: 22px; height: 22px; border: none; cursor: pointer; background: none; padding: 0; flex-shrink: 0;
@@ -300,6 +320,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
       </select>
     </div>
 
+    <!-- Individual transcripts (always visible: overlays whatever the cells show) -->
+    <div class="section" id="transcript-section" style="display:none; margin-bottom: 12px;">
+      <div class="section-title">Individual Transcripts</div>
+      <div class="bulk-actions">
+        <button class="bulk-btn" onclick="allTranscriptsOff()">Hide All</button>
+      </div>
+      <div id="transcript-list"></div>
+      <div class="colormap-row" style="margin-top:8px;">
+        <label>Dot size</label>
+        <input type="range" id="tx-size" min="0.4" max="6" step="0.2" value="1.6"
+               oninput="setTranscriptRadius(this.value)" style="flex:1;">
+        <span id="tx-size-val" style="min-width:26px; text-align:right;">1.6</span>
+      </div>
+      <div class="colormap-row">
+        <label>Opacity</label>
+        <input type="range" id="tx-opacity" min="0.1" max="1" step="0.05" value="0.9"
+               oninput="setTranscriptOpacity(this.value)" style="flex:1;">
+        <span id="tx-opacity-val" style="min-width:34px; text-align:right;">90%</span>
+      </div>
+    </div>
+
     <!-- Cell type section -->
     <div id="celltype-section">
       <div class="section">
@@ -415,6 +456,21 @@ let hasPolygons = false;
 // Per-cell polygon arrays for deck.gl (built once)
 let polygonData = null;    // Array of {polygon: [[x,y],...], index: i}
 let captureScreenshot = false; // flag for screenshot capture
+
+// ----------------------------------------------------------------------------
+// Individual transcript overlay (molecule-level, optional)
+// Each gene is a separate Float32Array of interleaved [x0,y0,x1,y1,...] already
+// in VIEWER coordinates, fetched lazily the first time the gene is switched on.
+// Drawn ABOVE the cells, so cells can stay coloured by cell type underneath.
+// ----------------------------------------------------------------------------
+let transcriptList = null;    // [{gene, group, n, file}] from transcript_list.json
+let transcriptData = {};      // {gene: Float32Array} — populated on demand
+let transcriptLoading = {};   // {gene: Promise} — de-dupes concurrent fetches
+let transcriptVisible = {};   // {gene: bool}
+let transcriptColors = {};    // {gene: [r,g,b]}
+let transcriptRadius = 1.6;   // in common units, same space as pointRadius
+let transcriptOpacity = 230;  // 0-255
+let transcriptVersion = 0;    // bumped when an array arrives -> updateTrigger
 
 // ============================================================================
 // Default 28-color palette (distinguishable)
@@ -533,6 +589,14 @@ async function init() {
     }
   } catch (e) { /* no proteins available */ }
 
+  // Load transcript manifest (optional — backward compatible with older exports)
+  try {
+    const txResp = await fetch('data/transcript_list.json');
+    if (txResp.ok) {
+      transcriptList = await txResp.json();
+    }
+  } catch (e) { /* no transcripts available */ }
+
   // Build annotation layer dropdown if multiple annotations available
   if (metadata.annotations) {
     const annSection = document.getElementById('annotation-section');
@@ -553,6 +617,7 @@ async function init() {
 
   // Build UI
   buildCelltypeUI();
+  buildTranscriptUI();
   buildGeneSearch();
   buildProteinButtons();
   loadColormapPreference();
@@ -964,8 +1029,8 @@ function createLayers() {
       }));
     }
 
-    // Highlight ring last, so highlighted cells are never occluded by neighbours.
-    return layers.concat(createHighlightLayer());
+    // Highlight ring, then transcripts last, so molecules sit above the cells.
+    return layers.concat(createHighlightLayer(), createTranscriptLayers());
   } else {
     return [new deck.ScatterplotLayer({
       id: 'cells',
@@ -982,8 +1047,104 @@ function createLayers() {
         getRadius: [pointRadius]
       },
       parameters: { depthTest: false }
-    })].concat(createHighlightLayer());
+    })].concat(createHighlightLayer(), createTranscriptLayers());
   }
+}
+
+// ============================================================================
+// Transcript overlay layers — one ScatterplotLayer per visible gene
+// ============================================================================
+function createTranscriptLayers() {
+  if (!transcriptList) return [];
+  const out = [];
+  for (const t of transcriptList) {
+    const g = t.gene;
+    if (!transcriptVisible[g]) continue;
+    const arr = transcriptData[g];
+    if (!arr) continue;                       // still loading
+    const c = transcriptColors[g] || [255, 255, 255];
+    const fill = [c[0], c[1], c[2], transcriptOpacity];
+    out.push(new deck.ScatterplotLayer({
+      id: 'tx-' + g,
+      data: { length: arr.length / 2 },
+      getPosition: (_, {index}) => [arr[index * 2], arr[index * 2 + 1], 0],
+      getFillColor: fill,
+      getRadius: transcriptRadius,
+      radiusUnits: 'common',
+      radiusMinPixels: 0.6,
+      radiusMaxPixels: 12,
+      pickable: false,                        // cells stay clickable underneath
+      updateTriggers: {
+        getPosition: [transcriptVersion],
+        getFillColor: [fill.join(',')],
+        getRadius: [transcriptRadius]
+      },
+      parameters: { depthTest: false }
+    }));
+  }
+  return out;
+}
+
+async function loadTranscript(gene) {
+  if (transcriptData[gene]) return;
+  if (transcriptLoading[gene]) return transcriptLoading[gene];
+  const entry = transcriptList.find(t => t.gene === gene);
+  if (!entry) return;
+  transcriptLoading[gene] = fetch('data/transcripts/' + entry.file)
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(buf => {
+      transcriptData[gene] = new Float32Array(buf);
+      transcriptVersion++;
+    })
+    .catch(e => {
+      console.warn('transcript load failed for ' + gene, e);
+      transcriptVisible[gene] = false;
+    })
+    .finally(() => { delete transcriptLoading[gene]; });
+  return transcriptLoading[gene];
+}
+
+async function toggleTranscript(gene, on) {
+  transcriptVisible[gene] = on;
+  const row = document.querySelector('.tx-row[data-gene="' + gene + '"]');
+  if (on && !transcriptData[gene]) {
+    if (row) row.classList.add('loading');
+    await loadTranscript(gene);
+    if (row) row.classList.remove('loading');
+    syncTranscriptRow(gene);
+  }
+  updateLayer();
+}
+
+function syncTranscriptRow(gene) {
+  const row = document.querySelector('.tx-row[data-gene="' + gene + '"]');
+  if (!row) return;
+  const cb = row.querySelector('input[type=checkbox]');
+  if (cb) cb.checked = !!transcriptVisible[gene];
+}
+
+function saveTranscriptColors() {
+  localStorage.setItem('spatial_viewer_tx_colors', JSON.stringify(transcriptColors));
+}
+
+function setTranscriptRadius(v) {
+  transcriptRadius = parseFloat(v);
+  document.getElementById('tx-size-val').textContent = transcriptRadius.toFixed(1);
+  updateLayer();
+}
+
+function setTranscriptOpacity(v) {
+  transcriptOpacity = Math.round(parseFloat(v) * 255);
+  document.getElementById('tx-opacity-val').textContent = Math.round(parseFloat(v) * 100) + '%';
+  updateLayer();
+}
+
+function allTranscriptsOff() {
+  Object.keys(transcriptVisible).forEach(g => {
+    transcriptVisible[g] = false;
+    syncTranscriptRow(g);
+  });
+  updateLayer();
 }
 
 function updateLayer() {
@@ -1114,6 +1275,67 @@ function buildCelltypeUI() {
     });
     const hlBtn = row.querySelector('.ct-hl');
     if (hlBtn) hlBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleHighlightLabel(ct); });
+  });
+}
+
+// ============================================================================
+// Transcript UI — grouped list, one checkbox + colour picker per gene
+// ============================================================================
+function buildTranscriptUI() {
+  if (!transcriptList || !transcriptList.length) return;
+  document.getElementById('transcript-section').style.display = 'block';
+
+  const saved = localStorage.getItem('spatial_viewer_tx_colors');
+  const savedObj = saved ? JSON.parse(saved) : {};
+  transcriptList.forEach(t => {
+    transcriptColors[t.gene] = savedObj[t.gene] || t.color || [255, 255, 255];
+    transcriptVisible[t.gene] = false;   // nothing on by default: 18 layers would swamp the cells
+  });
+
+  const host = document.getElementById('transcript-list');
+  host.innerHTML = '';
+  const groups = [];
+  transcriptList.forEach(t => { if (!groups.includes(t.group)) groups.push(t.group); });
+
+  groups.forEach(gr => {
+    const hdr = document.createElement('div');
+    hdr.className = 'tx-group';
+    hdr.textContent = gr;
+    host.appendChild(hdr);
+
+    transcriptList.filter(t => t.group === gr).forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'tx-row';
+      row.dataset.gene = t.gene;
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = false;
+      cb.addEventListener('change', () => toggleTranscript(t.gene, cb.checked));
+
+      const cp = document.createElement('input');
+      cp.type = 'color';
+      cp.value = rgbToHex(transcriptColors[t.gene]);
+      cp.title = 'Colour for ' + t.gene + ' transcripts';
+      cp.addEventListener('input', () => {
+        transcriptColors[t.gene] = hexToRgb(cp.value);
+        saveTranscriptColors();
+        updateLayer();
+      });
+
+      const label = document.createElement('span');
+      label.className = 'tx-label';
+      label.textContent = t.gene;
+      label.title = t.n.toLocaleString() + ' transcripts';
+      label.addEventListener('click', () => { cb.checked = !cb.checked; toggleTranscript(t.gene, cb.checked); });
+
+      const countEl = document.createElement('span');
+      countEl.className = 'tx-count';
+      countEl.textContent = t.n >= 1000 ? Math.round(t.n / 1000) + 'k' : t.n;
+
+      row.appendChild(cb); row.appendChild(cp); row.appendChild(label); row.appendChild(countEl);
+      host.appendChild(row);
+    });
   });
 }
 

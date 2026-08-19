@@ -1,0 +1,128 @@
+[
+  {
+    "gene": "CD3D",
+    "group": "T lineage",
+    "n": 73428,
+    "file": "CD3D.bin",
+    "color": [0, 229, 255]
+  },
+  {
+    "gene": "CD3E",
+    "group": "T lineage",
+    "n": 52293,
+    "file": "CD3E.bin",
+    "color": [64, 196, 255]
+  },
+  {
+    "gene": "CD2",
+    "group": "T lineage",
+    "n": 85537,
+    "file": "CD2.bin",
+    "color": [24, 255, 255]
+  },
+  {
+    "gene": "TRAC",
+    "group": "T lineage",
+    "n": 96497,
+    "file": "TRAC.bin",
+    "color": [100, 181, 246]
+  },
+  {
+    "gene": "EGR1",
+    "group": "Early activation",
+    "n": 156930,
+    "file": "EGR1.bin",
+    "color": [255, 213, 79]
+  },
+  {
+    "gene": "EGR2",
+    "group": "Early activation",
+    "n": 54737,
+    "file": "EGR2.bin",
+    "color": [255, 179, 0]
+  },
+  {
+    "gene": "NR4A1",
+    "group": "Early activation",
+    "n": 140280,
+    "file": "NR4A1.bin",
+    "color": [255, 143, 0]
+  },
+  {
+    "gene": "NR4A2",
+    "group": "Early activation",
+    "n": 62883,
+    "file": "NR4A2.bin",
+    "color": [255, 110, 64]
+  },
+  {
+    "gene": "NR4A3",
+    "group": "Early activation",
+    "n": 70088,
+    "file": "NR4A3.bin",
+    "color": [255, 171, 145]
+  },
+  {
+    "gene": "KDM6B",
+    "group": "Early activation",
+    "n": 49119,
+    "file": "KDM6B.bin",
+    "color": [244, 81, 30]
+  },
+  {
+    "gene": "IER3",
+    "group": "Early activation",
+    "n": 110099,
+    "file": "IER3.bin",
+    "color": [255, 224, 130]
+  },
+  {
+    "gene": "IFNG",
+    "group": "Cytokine",
+    "n": 22067,
+    "file": "IFNG.bin",
+    "color": [255, 64, 129]
+  },
+  {
+    "gene": "IL2",
+    "group": "Cytokine",
+    "n": 9778,
+    "file": "IL2.bin",
+    "color": [224, 64, 251]
+  },
+  {
+    "gene": "IL21",
+    "group": "Cytokine",
+    "n": 7175,
+    "file": "IL21.bin",
+    "color": [179, 136, 255]
+  },
+  {
+    "gene": "CSF2",
+    "group": "Cytokine",
+    "n": 19597,
+    "file": "CSF2.bin",
+    "color": [105, 240, 174]
+  },
+  {
+    "gene": "IL26",
+    "group": "Cytokine",
+    "n": 22044,
+    "file": "IL26.bin",
+    "color": [0, 230, 118]
+  },
+  {
+    "gene": "IL23A",
+    "group": "Cytokine",
+    "n": 20110,
+    "file": "IL23A.bin",
+    "color": [245, 0, 87]
+  },
+  {
+    "gene": "FGL2",
+    "group": "Cytokine",
+    "n": 85544,
+    "file": "FGL2.bin",
+    "color": [206, 147, 216]
+  }
+]
